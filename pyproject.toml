@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vds-cards-cli"
+version = "0.1.0"
+description = "A CLI tool for building dataset cards for vulnerability datasets."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [
+  { name = "Torge Hinrichs", email = "torge.hinrichs@tuhh.de" }
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/gOATiful/Dataset-Cards-CLI"
+Issues = "https://github.com/gOATiful/Dataset-Cards-CLI/issues"
+
+[project.scripts]
+vds-cards-cli = "vds_cards_cli.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vds_cards_cli"]

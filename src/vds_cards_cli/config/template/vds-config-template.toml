@@ -1,0 +1,36 @@
+[dataset]
+name="Example Dataset"
+description = "Dataset of annotated images"
+version = "1.0.0"
+license = "MIT"
+has_runable_code_or_test_cases=false
+languages="c,c++" # supported languages: c, c++, java, python, multiple options possible 
+
+[dataset.files]
+# path="path/to/single_dataset_file" # use this if no splits are available
+train="path/to/trainfile"
+test="path/to/testfile"
+valid="path/to/validfile"
+
+[dataset.fields]
+function="func"
+label="label"
+vuln_label_value=1
+cve="cve"
+cwe="cwe"
+project="project_url"
+
+[dataset.analysis.quiality_metrics]
+completeness=true
+diversity=true
+balance=true
+timespan=true
+uniqueness=true
+cross_contamination=true
+
+[dataset.analysis.structural_metrics]
+loc=true
+tokens=true
+cyclomatic_complexity=true
+node_diversity=true
+

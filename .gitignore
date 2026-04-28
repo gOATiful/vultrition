@@ -2,6 +2,10 @@
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,macos,direnv,dotenv,python,pythonvanilla,venv,virtualenv
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,macos,direnv,dotenv,python,pythonvanilla,venv,virtualenv
 
+
+datasets/
+vds-config.toml
+
 ### direnv ###
 .direnv
 .envrc
@@ -16,7 +20,8 @@
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*
