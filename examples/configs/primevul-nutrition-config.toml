@@ -3,7 +3,7 @@ name="Example Dataset"
 description = "Dataset of annotated images"
 version = "1.0.0"
 license = "MIT"
-languages="C/C++"
+languages="cpp"
 has_runable_code_or_test_cases=false
 
 [dataset.files]

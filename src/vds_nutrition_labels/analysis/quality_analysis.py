@@ -1,9 +1,11 @@
 
+import os
 from typing import Tuple
 
 from vds_nutrition_labels.models import config
 from vds_nutrition_labels.models.dataset import Dataset, Sample
 from vds_nutrition_labels.models.results import CrossContaminationResults, DiversityResults, QualityMetricsResults, SplitNumbericalMetricsResults, StructuralMetricsResults, CompletenessResults, TimeSpanResults
+from vds_nutrition_labels.analysis.uniqueness_analysis import run_uniqueness_detection, UniquenessConfig
 
 
 def _eval_balance(samples: list[Sample]) -> float:
@@ -117,7 +119,7 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
         )
     else:
         timespan_train = timespan_test = timespan_valid = timespan_overall = None
-    
+
     print("Evaluating diversity metrics...")
     unique_cwes_train, unique_projects_train = _eval_diversity(
         dataset.train or [])
@@ -128,14 +130,46 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
     unique_cwes_overall, unique_projects_overall = _eval_diversity(
         [*dataset.train, *dataset.test, *dataset.validation])
 
-
-
     print("Evaluating balance metrics...")
     balance_train = _eval_balance(dataset.train or [])
     balance_test = _eval_balance(dataset.test or [])
     balance_valid = _eval_balance(dataset.validation or [])
     balance_overall = _eval_balance(
         [*dataset.train, *dataset.test, *dataset.validation])
+
+    print("Evaluating uniqueness and cross-contamination metrics...")
+    print("creating source folders...")
+    if dataset.has_splits():
+        file_extension_mapping = {
+            "c": "c",
+            "cpp": "cpp",
+            "java": "java",
+            "python": "py",
+        }
+        extension = ""
+        for lang, ext in file_extension_mapping.items():
+            if lang in config.languages.lower():
+                extension = ext
+                break
+
+        os.makedirs("uniqueness_source/train", exist_ok=True)
+        os.makedirs("uniqueness_source/test", exist_ok=True)
+        os.makedirs("uniqueness_source/validation", exist_ok=True)
+        for split_name, samples in [("train", dataset.train or []), ("test", dataset.test or []), ("validation", dataset.validation or [])]:
+            for i, sample in enumerate(samples):
+                with open(f"uniqueness_source/{split_name}/{split_name}_{i}.{extension}", "w", encoding="utf-8") as f:
+                    if sample.function and isinstance(sample.function, str):
+                        f.write(sample.function + "\n")
+
+        for split_name in ["train", "test", "validation"]:
+            print("Running uniqueness detection for split:", split_name)
+            result = run_uniqueness_detection(
+                f"uniqueness_source/{split_name}",
+                UniquenessConfig(
+                    output_dir="uniqueness_results",
+                ),
+            )
+            print(f"Uniqueness results for {split_name}: {result}")
 
     return QualityMetricsResults(
         completeness=completeness_results,
@@ -170,5 +204,5 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
             train_test=0,
             train_valid=0,
             test_valid=0,
-            )
+        )
     )
