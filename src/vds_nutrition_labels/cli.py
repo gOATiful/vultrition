@@ -1,11 +1,13 @@
 from __future__ import annotations
+from dataclasses import asdict
+import json
 import sys
 
 
-from vds_cards_cli.commands.load_config import load_config, print_config
-from vds_cards_cli.commands.create_config import create_config_template
-from vds_cards_cli.commands.parser import get_parser
-from vds_cards_cli.commands.run_analysis import run_full_analysis
+from vds_nutrition_labels.commands.load_config import load_config, print_config
+from vds_nutrition_labels.commands.create_config import create_config_template
+from vds_nutrition_labels.commands.parser import get_parser
+from vds_nutrition_labels.commands.run_analysis import run_full_analysis
 
 
 def main() -> int:
@@ -36,7 +38,11 @@ def main() -> int:
             print_config(config)
 
         if args.run_analysis:
-            run_full_analysis(config)
+            results = run_full_analysis(config)
+            print(results)
+            with open(args.output, "w") as f:
+                json.dump(asdict(results), f, indent=2)
+            
         else:
             print(
                 "No analysis option specified. Use --run_analysis to run the full analysis pipeline.")

@@ -78,7 +78,6 @@ class StructuralMetrics:
     loc: bool
     tokens: bool
     cyclomatic_complexity: bool
-    node_diversity: bool
 
     def _format_value(self, value: t.Any) -> str:
         if isinstance(value, bool):
@@ -92,7 +91,6 @@ class StructuralMetrics:
             f"{prefix}  loc: {self._format_value(self.loc)}",
             f"{prefix}  tokens: {self._format_value(self.tokens)}",
             f"{prefix}  cyclomatic_complexity: {self._format_value(self.cyclomatic_complexity)}",
-            f"{prefix}  node_diversity: {self._format_value(self.node_diversity)}",
         ]
 
 

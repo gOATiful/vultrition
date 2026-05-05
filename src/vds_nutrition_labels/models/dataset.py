@@ -30,14 +30,24 @@ class Dataset:
         train = self.train or []
         test = self.test or []
         validation = self.validation or []
+        data = self.data or []
 
-        train_count = len(train)
-        test_count = len(test)
-        valid_count = len(validation)
-        total_count = train_count + test_count + valid_count
+        if self.has_splits():
+            split_counts = {
+                "train": len(train),
+                "test": len(test),
+                "validation": len(validation),
+            }
+            total_count = sum(split_counts.values())
+            samples = train + test + validation
+        else:
+            split_counts = {"all": len(data)}
+            total_count = len(data)
+            samples = data
 
-        label_counter = Counter(sample.label for sample in train + test + validation)
+        label_counter = Counter(sample.label for sample in samples)
         label_lines = [f"      {label}: {count}" for label, count in sorted(label_counter.items())]
+        sample_lines = "\n".join(f"    {name}: {count}" for name, count in split_counts.items())
 
         return (
             f"Dataset summary for {self.name}\n"
@@ -45,9 +55,7 @@ class Dataset:
             f"  version: {self.version}\n"
             f"  license: {self.license}\n"
             f"  samples:\n"
-            f"    train: {train_count}\n"
-            f"    test: {test_count}\n"
-            f"    validation: {valid_count}\n"
+            f"{sample_lines}\n"
             f"    total: {total_count}\n"
             f"  label distribution:\n"
             + "\n".join(label_lines)

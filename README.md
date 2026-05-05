@@ -1,10 +1,10 @@
-# Dataset Cards CLI
+# Vulnerability Dataset Nutrition Labels
 
-A command-line tool for building dataset cards from vulnerability dataset configuration files.
+A command-line tool for building vulnerability dataset nutrition labels from configuration files.
 
 ## Features
 
-- Generate dataset cards for vulnerability datasets using a TOML config file
+- Generate vulnerability dataset nutrition labels using a TOML config file
 - Built-in config template creation
 - Runs both quality and structural dataset analysis
 - Supports train/test/validation split metadata and field mappings
@@ -28,25 +28,25 @@ python -m pip install tomli
 Create a default configuration template:
 
 ```bash
-vds-cards-cli --create-config-template
+vds-nutrition-labels --create-config-template
 ```
 
 Or create it at a specific location:
 
 ```bash
-vds-cards-cli --create-config-template path/to/vds-config.toml
+vds-nutrition-labels --create-config-template path/to/vds-config.toml
 ```
 
 Run the full analysis pipeline using a config file:
 
 ```bash
-vds-cards-cli --config vds-config.toml --output vds_card_analysis.json --run_analysis
+vds-nutrition-labels --config vds-config.toml --output vds_card_analysis.json --run_analysis
 ```
 
 Enable verbose output:
 
 ```bash
-vds-cards-cli --config vds-config.toml --output vds_card_analysis.json --run_analysis --verbose
+vds-nutrition-labels --config vds-config.toml --output vds_card_analysis.json --run_analysis --verbose
 ```
 
 ## Configuration
@@ -59,7 +59,7 @@ The CLI expects a TOML file with a top-level `[dataset]` section. The built-in t
 - `files` section for `train`, `test`, and `valid` dataset paths
 - `fields` section for field names such as `function`, `label`, `cve`, `cwe`, and `project`
 - `analysis.quality_metrics` including `completeness`, `diversity`, `balance`, `timespan`, `uniqueness`, and `cross_contamination`
-- `analysis.structural_metrics` including `loc`, `tokens`, `cyclomatic_complexity`, and `node_diversity`
+- `analysis.structural_metrics` including `loc`, `tokens`, and `cyclomatic_complexity`
 
 Example:
 
@@ -97,13 +97,12 @@ cross_contamination = true
 loc = true
 tokens = true
 cyclomatic_complexity = true
-node_diversity = true
 ```
 
 ## Project
 
-- Package name: `vds-cards-cli`
-- Entry point: `vds_cards_cli.cli:main`
+- Package name: `vds-nutrition-labels`
+- Entry point: `vds_nutrition_labels.cli:main`
 - License: MIT
 
 ## Contributing

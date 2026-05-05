@@ -32,5 +32,4 @@ cross_contamination=true
 loc=true
 tokens=true
 cyclomatic_complexity=true
-node_diversity=true
 

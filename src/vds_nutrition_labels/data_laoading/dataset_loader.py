@@ -176,6 +176,7 @@ def load_dataset_from_config(config: DatasetConfig) -> Dataset:
         "vuln_label_value": config.fields.vuln_label_value,
         "cve": config.fields.cve,
         "cwe": config.fields.cwe,
+        "project": config.fields.project,
     }
 
     return Dataset(

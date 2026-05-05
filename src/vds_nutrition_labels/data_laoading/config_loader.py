@@ -100,7 +100,6 @@ def _load_structural_metrics(analysis_section: dict[str, t.Any]) -> StructuralMe
             structural_section.get("cyclomatic_complexity"),
             "dataset.analysis.structural_metrics.cyclomatic_complexity",
         ),
-        node_diversity=_cast_bool(structural_section.get("node_diversity"), "dataset.analysis.structural_metrics.node_diversity"),
     )
 
 

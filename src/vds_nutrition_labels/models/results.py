@@ -3,10 +3,10 @@ from dataclasses import dataclass
 
 @dataclass
 class SplitNumbericalMetricsResults:
-    train: int
-    test: int
-    validation: int
-    overall: int
+    train: float
+    test: float
+    validation: float
+    overall: float
 
 
 @dataclass
@@ -44,7 +44,7 @@ class QualityMetricsResults:
     diversity: DiversityResults
     balance: float
     timespan: TimeSpanResults
-    uniqueness: float
+    uniqueness: SplitNumbericalMetricsResults
     cross_contamination: CrossContaminationResults
 
 
