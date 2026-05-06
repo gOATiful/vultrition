@@ -296,8 +296,8 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
         )
         cross_contamination = {
             "train_test": -1,
-            "train_valid": -1,
-            "test_valid": -1,
+            "train_validation": -1,
+            "test_validation": -1,
         }
 
     return QualityMetricsResults(

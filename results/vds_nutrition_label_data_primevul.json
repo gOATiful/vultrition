@@ -1,7 +1,7 @@
 {
-  "name": "Example Dataset",
-  "version": "1.0.0",
-  "description": "Dataset of annotated images",
+  "name": "PrimeVul",
+  "version": "0.1",
+  "description": "PrimeVul is a new dataset for vulnerability detection, aiming to train and evaluate code language models in the realistic vulnerability detection settings.",
   "license": "MIT",
   "languages": "cpp",
   "has_runable_code_or_test_cases": false,

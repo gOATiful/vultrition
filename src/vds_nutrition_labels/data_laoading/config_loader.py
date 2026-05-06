@@ -55,11 +55,18 @@ def _cast_bool(value: t.Any, field_name: str) -> bool:
     raise ValueError(f"Expected boolean for '{field_name}', got {value!r}.")
 
 
+def _cast_optional_str(value: t.Any) -> str | None:
+    if value is None:
+        return None
+    return str(value)
+
+
 def _load_dataset_files(files_section: dict[str, t.Any]) -> DatasetFiles:
     return DatasetFiles(
-        train=_cast_str(files_section.get("train"), "dataset.files.train"),
-        test=_cast_str(files_section.get("test"), "dataset.files.test"),
-        valid=_cast_str(files_section.get("valid"), "dataset.files.valid"),
+        train=_cast_optional_str(files_section.get("train")),
+        test=_cast_optional_str(files_section.get("test")),
+        valid=_cast_optional_str(files_section.get("valid")),
+        data=_cast_optional_str(files_section.get("data")),
     )
 
 

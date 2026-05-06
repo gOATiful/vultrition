@@ -5,18 +5,23 @@ import typing as t
 
 @dataclass
 class DatasetFiles:
-    train: str
-    test: str
-    valid: str
+    train: t.Optional[str] = None
+    test: t.Optional[str] = None
+    valid: t.Optional[str] = None
+    data: t.Optional[str] = None
 
     def _to_lines(self, indent: int = 0) -> list[str]:
         prefix = "  " * indent
-        return [
-            f"{prefix}files:",
-            f"{prefix}  train: {self.train}",
-            f"{prefix}  test: {self.test}",
-            f"{prefix}  valid: {self.valid}",
-        ]
+        lines = [f"{prefix}files:"]
+        if self.train is not None:
+            lines.append(f"{prefix}  train: {self.train}")
+        if self.test is not None:
+            lines.append(f"{prefix}  test: {self.test}")
+        if self.valid is not None:
+            lines.append(f"{prefix}  valid: {self.valid}")
+        if self.data is not None:
+            lines.append(f"{prefix}  data: {self.data}")
+        return lines
 
 
 @dataclass

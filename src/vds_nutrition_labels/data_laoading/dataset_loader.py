@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import pathlib
+import sys
 import typing as t
 
 from ..models.config import DatasetConfig
@@ -11,11 +12,23 @@ from ..models.dataset import Dataset, Sample
 FieldMapping = dict[str, str]
 
 
+def _increase_csv_field_size_limit() -> None:
+    max_size = sys.maxsize
+
+    while True:
+        try:
+            csv.field_size_limit(max_size)
+            break
+        except OverflowError:
+            max_size = int(max_size / 10)
+
 def _normalize_path(path: str | pathlib.Path) -> pathlib.Path:
     return pathlib.Path(path).expanduser().resolve()
 
 
 def _read_csv_records(path: pathlib.Path) -> list[dict[str, t.Any]]:
+    _increase_csv_field_size_limit()
+
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
         return [dict(row) for row in reader]
@@ -86,6 +99,31 @@ def _normalize_cwe(raw_cwe: t.Any) -> list[str]:
     raw = str(raw_cwe).strip()
     if not raw:
         return []
+
+    # Remove outer quotes if the field is wrapped like '"[cwe-32]"' or "'cwe-32'".
+    while len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in "'\"":
+        raw = raw[1:-1].strip()
+        if not raw:
+            return []
+
+    if raw.startswith("[") and raw.endswith("]"):
+        inner = raw[1:-1].strip()
+        if not inner:
+            return []
+
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                return [str(item).strip() for item in parsed if str(item).strip()]
+        except json.JSONDecodeError:
+            pass
+
+        separators = [",", ";", "|"]
+        for sep in separators:
+            if sep in inner:
+                return [item.strip().strip('"\'') for item in inner.split(sep) if item.strip()]
+
+        return [inner.strip().strip('"\'')]
 
     separators = [",", ";", "|"]
     for sep in separators:
@@ -179,15 +217,34 @@ def load_dataset_from_config(config: DatasetConfig) -> Dataset:
         "project": config.fields.project,
     }
 
-    return Dataset(
-        name=config.name,
-        description=config.description,
-        version=config.version,
-        license=config.license,
-        train=_load_split(config.files.train, fields),
-        test=_load_split(config.files.test, fields),
-        validation=_load_split(config.files.valid, fields),
-    )
+    train_path = config.files.train
+    test_path = config.files.test
+    valid_path = config.files.valid
+    data_path = config.files.data
 
+    if data_path is not None:
+        # If data file is present, load it into data, ignore splits
+        return Dataset(
+            name=config.name,
+            description=config.description,
+            version=config.version,
+            license=config.license,
+            data=_load_split(data_path, fields),
+            train=[],
+            test=[],
+            validation=[],
+        )
+    else:
+        # Otherwise, load the split files
+        return Dataset(
+            name=config.name,
+            description=config.description,
+            version=config.version,
+            license=config.license,
+            train=_load_split(train_path, fields) if train_path else [],
+            test=_load_split(test_path, fields) if test_path else [],
+            validation=_load_split(valid_path, fields) if valid_path else [],
+            data=[],
+        )
 
 __all__ = ["load_dataset_from_config"]

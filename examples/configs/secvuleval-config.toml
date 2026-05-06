@@ -1,15 +1,13 @@
 [dataset]
-name="BigVul"
-description = "Dataset of annotated images"
-
-version = "1.0.0"
+name="SecVulEval"
+description = "SecVulEval is a collection of real-world C/C++ vulnerabilities."
+version = "bde3e7c"
 license = "MIT"
 languages="cpp"
 has_runable_code_or_test_cases=false
 
 [dataset.files]
-data="datasets/bigvul/extracted_data.csv"
-
+data="datasets/secvuleval/secvuleval_extracted.jsonl"
 
 [dataset.fields]
 function="function"
