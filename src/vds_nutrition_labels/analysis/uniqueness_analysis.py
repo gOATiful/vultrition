@@ -200,7 +200,7 @@ class UniquenessConfig:
 
     tokens_only: bool = False
     keep_temp: bool = False
-    quiet: bool = False
+    quiet: bool = True
 
 
 @dataclass
@@ -308,7 +308,7 @@ def ensure_detector(
     tool_root = (
         Path(tool_root_arg).expanduser().resolve()
         if tool_root_arg
-        else (output_dir / "external" / REPO_NAME).resolve()
+        else (Path("external") / REPO_NAME).resolve()
     )
 
     csproj = resolve_detector_project(tool_root)

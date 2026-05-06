@@ -1,0 +1,35 @@
+[dataset]
+name="BigVul"
+description = "Dataset of annotated images"
+
+
+version = "1.0.0"
+license = "MIT"
+languages="cpp"
+has_runable_code_or_test_cases=false
+
+[dataset.files]
+train="datasets/primevul/primevul_train.jsonl"
+test="datasets/primevul/primevul_test.jsonl"
+valid="datasets/primevul/primevul_valid.jsonl"
+
+[dataset.fields]
+function="func"
+label="target"
+vuln_label_value=1
+cve="cve"
+cwe="cwe"
+project="project_url"
+
+[dataset.analysis.quiality_metrics]
+completeness=true
+diversity=true
+balance=true
+timespan=true
+uniqueness=false
+cross_contamination=false
+
+[dataset.analysis.structural_metrics]
+loc=true
+tokens=true
+cyclomatic_complexity=true

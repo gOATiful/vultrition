@@ -7,6 +7,7 @@ datasets/
 vds-config.toml
 uniqueness_results/
 uniqueness_source/
+external/
 
 ### direnv ###
 .direnv
