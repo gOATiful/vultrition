@@ -11,6 +11,14 @@ from vds_nutrition_labels.models.results import CrossContaminationResults, Diver
 from vds_nutrition_labels.analysis.uniqueness_analysis import run_uniqueness_detection, UniquenessConfig
 
 
+REQUIRED_FIELDS = {
+    "function",
+    "label",
+    "cve",
+    "cwe",
+    "project",
+}
+
 def _create_source_files(samples: list[Sample], split_name: str, file_name: str, extension: str):
     os.makedirs(f"uniqueness_source/{split_name}", exist_ok=True)
     for i, sample in enumerate(samples):
@@ -36,6 +44,7 @@ def _get_file_extension(config: config) -> str:
 
 
 def _eval_uniqueness(config: config, dataset: Dataset) -> float:
+    
     splits = {
         "train": dataset.train or [],
         "test": dataset.test or [],
@@ -114,13 +123,6 @@ def _eval_cross_contamination(config: config, dataset: Dataset) -> CrossContamin
 
     for split_name in cross_splits:
         print("Running uniqueness detection for split:", split_name)
-        result = run_uniqueness_detection(
-            f"uniqueness_source/{split_name}",
-            UniquenessConfig(
-                output_dir="uniqueness_results",
-            ),
-        )
-
         cnt = 0
         with open(f"uniqueness_results/duplicate_pairs.csv", "r") as fin:
             content = fin.readlines()
@@ -164,27 +166,34 @@ def _eval_diversity(samples: list[Sample]) -> Tuple[float, float]:
         if sample.cwe and isinstance(sample.cwe, list):
             cwes.update(sample.cwe)
 
-    return len(cwes) / len(samples) if samples else 0.0, len(projects) / len(samples) if samples else 0.0
+    return len(cwes)if samples else 0.0, len(projects) if samples else 0.0
 
 
-def _is_sample_complete(sample: Sample) -> bool:
-    if not sample.function or not isinstance(sample.function, str) or not sample.function.strip():
-        return False
-    if sample.label is None:
-        return False
-    if not sample.cve or not isinstance(sample.cve, str) or not sample.cve.strip():
-        return False
-    if not sample.cwe or not isinstance(sample.cwe, list) or len(sample.cwe) == 0:
-        return False
-    if not sample.project or not isinstance(sample.project, str) or not sample.project.strip():
-        return False
+
+
+
+def has_all_required_fields(sample: dict) -> bool:
+    for field in REQUIRED_FIELDS:
+        if field not in sample:
+            return False
+
+        value = sample[field]
+
+        if value is None:
+            return False
+
+        if isinstance(value, str) and not value.strip():
+            return False
+
+        if isinstance(value, list) and len(value) == 0:
+            return False
+
     return True
-
 
 def _eval_completeness(samples: list[Sample]) -> float:
     if not samples:
         return []
-    return [1 if not _is_sample_complete(sample) else 0 for sample in samples]
+    return [1 if has_all_required_fields(sample.__dict__) else 0 for sample in samples]
 
 
 def _eval_timespan(samples: list[Sample]) -> Tuple[str, str]:
@@ -255,22 +264,31 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
         timespan_train = timespan_test = timespan_valid = timespan_overall = None
 
     print("Evaluating diversity metrics...")
-    unique_cwes_train, unique_projects_train = _eval_diversity(
-        dataset.train or [])
-    unique_cwes_test, unique_projects_test = _eval_diversity(
-        dataset.test or [])
-    unique_cwes_valid, unique_projects_valid = _eval_diversity(
-        dataset.validation or [])
-    unique_cwes_overall, unique_projects_overall = _eval_diversity(
-        [*dataset.train, *dataset.test, *dataset.validation])
+    if dataset.has_splits():
+        unique_cwes_train, unique_projects_train = _eval_diversity(
+            dataset.train or [])
+        unique_cwes_test, unique_projects_test = _eval_diversity(
+            dataset.test or [])
+        unique_cwes_valid, unique_projects_valid = _eval_diversity(
+            dataset.validation or [])
+        unique_cwes_overall, unique_projects_overall = _eval_diversity(
+            [*dataset.train, *dataset.test, *dataset.validation])
 
-    print("Evaluating balance metrics...")
-    balance_train = _eval_balance(dataset.train or [])
-    balance_test = _eval_balance(dataset.test or [])
-    balance_valid = _eval_balance(dataset.validation or [])
-    balance_overall = _eval_balance(
-        [*dataset.train, *dataset.test, *dataset.validation])
-
+        print("Evaluating balance metrics...")
+        balance_train = _eval_balance(dataset.train or [])
+        balance_test = _eval_balance(dataset.test or [])
+        balance_valid = _eval_balance(dataset.validation or [])
+        balance_overall = _eval_balance(
+            [*dataset.train, *dataset.test, *dataset.validation])
+    else:
+        unique_cwes_overall, unique_projects_overall = _eval_diversity(
+            dataset.data or [])
+        balance_overall = _eval_balance(dataset.data or [])
+        unique_cwes_train = unique_cwes_test = unique_cwes_valid = None
+        unique_projects_train = unique_projects_test = unique_projects_valid = None
+        balance_train = balance_test = balance_valid = None
+    
+    
     print("Evaluating uniqueness and cross-contamination metrics...")
     print("creating source folders...")
     if dataset.has_splits():
@@ -299,8 +317,16 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
             "train_validation": -1,
             "test_validation": -1,
         }
-
+    
+    overall_samples_cnt = len(dataset.train) + len(dataset.test) + len(dataset.validation) if dataset.has_splits() else len(dataset.data)
+    
     return QualityMetricsResults(
+        samples=SplitNumbericalMetricsResults(
+            train=len(dataset.train) if dataset.train else -1,
+            test=len(dataset.test) if dataset.test else -1,
+            validation=len(dataset.validation) if dataset.validation else -1,
+            overall=overall_samples_cnt,
+        ),
         completeness=completeness_results,
         diversity=DiversityResults(
             unique_cwes=SplitNumbericalMetricsResults(

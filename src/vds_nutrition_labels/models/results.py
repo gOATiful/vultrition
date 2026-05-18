@@ -40,6 +40,7 @@ class CompletenessResults:
 
 @dataclass
 class QualityMetricsResults:
+    samples: SplitNumbericalMetricsResults
     completeness: CompletenessResults
     diversity: DiversityResults
     balance: float
@@ -69,6 +70,7 @@ class StructuralMetricsResults:
     loc: SplitStatisticalMetricsResults
     tokens: SplitStatisticalMetricsResults
     cyclomatic_complexity: SplitStatisticalMetricsResults
+    preprocessor_directives: SplitNumbericalMetricsResults
 
 
 @dataclass

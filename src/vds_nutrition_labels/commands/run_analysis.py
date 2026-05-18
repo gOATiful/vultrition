@@ -29,7 +29,7 @@ def run_full_analysis(config: config) -> None:
     meta_results = run_meta_analysis(config)
 
     quality_results = run_quality_analysis(config, dataset)
-    structural_results = run_structural_analysis(config, dataset)
     meta_results.quality_metrics = quality_results
+    structural_results = run_structural_analysis(config, dataset)
     meta_results.structural_metrics = structural_results
     return meta_results

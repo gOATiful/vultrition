@@ -1,23 +1,21 @@
 [dataset]
-name="Example Dataset"
-description = "Dataset of annotated images"
-version = "1.0.0"
-license = "MIT"
+name="DiverseVul"
+description = "A New Vulnerable Source Code Dataset for Deep Learning Based Vulnerability Detection"
+version = "2023-07-02"
+license = ""
 languages="cpp"
 has_runable_code_or_test_cases=false
 
 [dataset.files]
-train="datasets/primevul/primevul_train.jsonl"
-test="datasets/primevul/primevul_test.jsonl"
-valid="datasets/primevul/primevul_valid.jsonl"
+data="datasets/diversevul/diversevul.jsonl"
 
 [dataset.fields]
-function="func"
-label="target"
+function="function"
+label="label"
 vuln_label_value=1
 cve="cve"
 cwe="cwe"
-project="project_url"
+project="project"
 
 [dataset.analysis.quiality_metrics]
 completeness=true

@@ -2,9 +2,51 @@ import lizard
 import tiktoken
 from tqdm import tqdm
 
+from pygments.lexers import guess_lexer
+from pygments.util import ClassNotFound
+
 from vds_nutrition_labels.models import config
 from vds_nutrition_labels.models.dataset import Dataset, Sample
-from vds_nutrition_labels.models.results import CountingResult, SplitStatisticalMetricsResults, StructuralMetricsResults
+from vds_nutrition_labels.models.results import CountingResult, SplitNumbericalMetricsResults, SplitStatisticalMetricsResults, StructuralMetricsResults
+
+
+LANGUAGE_TO_FILENAME = {
+    "python": "sample.py",
+    "java": "Sample.java",
+    "c": "sample.c",
+    "cpp": "sample.cpp",
+}
+
+C_CPP_PREPROCESSOR_DIRECTIVES = {
+    "define",
+    "undef",
+    "include",
+    "if",
+    "ifdef",
+    "ifndef",
+    "elif",
+    "elifdef",
+    "elifndef",
+    "else",
+    "endif",
+    "line",
+    "error",
+    "warning",
+    "pragma",
+    "embed",
+}
+
+
+def has_preprocessor_directives(source: str) -> bool:
+    lines = source.splitlines()
+    for line in lines:
+        stripped_line = line.strip()
+        if stripped_line.startswith("#"):
+            directive = stripped_line[1:].split()[0] if len(
+                stripped_line) > 1 else ""
+            if directive in C_CPP_PREPROCESSOR_DIRECTIVES:
+                return True
+    return False
 
 
 def _count_tokens(text: str, model: str = "gpt-4o") -> int:
@@ -19,30 +61,64 @@ def _calc_std(values: list[int], mean: float) -> float:
     return variance ** 0.5
 
 
-def _get_metrics(samples: list[Sample], label: str, count_tokens: bool = False, count_structural: bool = False) -> list[int]:
+def detect_language_pygments(source: str) -> str:
+    try:
+        lexer = guess_lexer(source)
+    except ClassNotFound:
+        return "unknown"
+
+    aliases = set(lexer.aliases)
+    name = lexer.name.lower()
+
+    if "python" in aliases:
+        return "python"
+    if "java" in aliases:
+        return "java"
+    if "c++" in aliases or "cpp" in aliases:
+        return "cpp"
+    if "c" in aliases and "c++" not in name:
+        return "c"
+
+    return "unknown"
+
+
+def _get_metrics(samples: list[Sample], label: str, count_tokens: bool = True, count_structural: bool = True) -> tuple[list[int], list[int], list[int]]:
     if not samples:
-        return []
+        return [], [], [], 0
 
     loc_values = []
     cyclomatic_complexity_values = []
     token_counts = []
+    cnt_preprocessor_directives = 0
     for sample in tqdm(samples, desc=f"Analyzing Structural Metrics for {label}"):
         try:
             if count_structural:
-                analysis = lizard.analyze_file.analyze_source_code(
-                    "f", sample.function)
-                if analysis and len(analysis.function_list) > 0:
-                    loc_values.append(analysis.function_list[0].nloc)
-                    cyclomatic_complexity_values.append(
-                        analysis.function_list[0].cyclomatic_complexity)
+                source = sample.function
+                language = detect_language_pygments(source)
 
+                if language == "unknown":
+                    language = "cpp"  # Default to C++ if language detection fails
+
+                filename = LANGUAGE_TO_FILENAME.get(language, "sample.cpp")
+
+                analysis = lizard.analyze_file.analyze_source_code(
+                    filename, source)
+                if analysis and len(analysis.function_list) > 0:
+                    # Be careful: function_list[0] may not be the function you expect
+                    func = analysis.function_list[0]
+                    loc_values.append(func.nloc)
+                    if language in {"c", "cpp"} and not has_preprocessor_directives(source):
+                        cyclomatic_complexity_values.append(
+                            func.cyclomatic_complexity)
+                    else:
+                        cnt_preprocessor_directives += 1
             if count_tokens:
                 token_counts.append(_count_tokens(sample.function))
         except Exception as exc:
             print(
                 f"Warning: Failed to analyze function for Structural Metrics: {exc}")
 
-    return loc_values, cyclomatic_complexity_values, token_counts
+    return loc_values, cyclomatic_complexity_values, token_counts, cnt_preprocessor_directives
 
 
 def analyze_structural_metrics(config: config, dataset: Dataset) -> StructuralMetricsResults:
@@ -52,11 +128,11 @@ def analyze_structural_metrics(config: config, dataset: Dataset) -> StructuralMe
         count_tokens = config.analysis.structural_metrics.tokens
         count_structural = config.analysis.structural_metrics.loc or config.analysis.structural_metrics.cyclomatic_complexity
         if dataset.has_splits():
-            train_nlocs, train_cyclomatic_complexity, train_token_counts = _get_metrics(
+            train_nlocs, train_cyclomatic_complexity, train_token_counts, train_cnt_preprocessor_directives = _get_metrics(
                 dataset.train or [], "Train", count_tokens=count_tokens, count_structural=count_structural)
-            test_nlocs, test_cyclomatic_complexity, test_token_counts = _get_metrics(
+            test_nlocs, test_cyclomatic_complexity, test_token_counts, test_cnt_preprocessor_directives = _get_metrics(
                 dataset.test or [], "Test", count_tokens=count_tokens, count_structural=count_structural)
-            valid_nlocs, valid_cyclomatic_complexity, valid_token_counts = _get_metrics(
+            valid_nlocs, valid_cyclomatic_complexity, valid_token_counts, valid_cnt_preprocessor_directives = _get_metrics(
                 dataset.validation or [], "Validation", count_tokens=count_tokens, count_structural=count_structural)
             overall_nlocs, overall_cyclomatic_complexity, overall_token_counts = [*train_nlocs, *test_nlocs, *valid_nlocs], [
                 *train_cyclomatic_complexity, *test_cyclomatic_complexity, *valid_cyclomatic_complexity], [*train_token_counts, *test_token_counts, *valid_token_counts]
@@ -157,7 +233,8 @@ def analyze_structural_metrics(config: config, dataset: Dataset) -> StructuralMe
                 len(train_token_counts) if train_token_counts else -1,
                 min=min(train_token_counts) if train_token_counts else -1,
                 max=max(train_token_counts) if train_token_counts else -1,
-                std=_calc_std(train_token_counts, sum(train_token_counts) / len(train_token_counts) if train_token_counts else 0)
+                std=_calc_std(train_token_counts, sum(
+                    train_token_counts) / len(train_token_counts) if train_token_counts else 0)
             )
             print(
                 "Evaluated token count metrics. Calculating token count results for test...")
@@ -166,7 +243,8 @@ def analyze_structural_metrics(config: config, dataset: Dataset) -> StructuralMe
                 len(test_token_counts) if test_token_counts else -1,
                 min=min(test_token_counts) if test_token_counts else -1,
                 max=max(test_token_counts) if test_token_counts else -1,
-                std=_calc_std(test_token_counts, sum(test_token_counts) / len(test_token_counts) if test_token_counts else 0)
+                std=_calc_std(test_token_counts, sum(
+                    test_token_counts) / len(test_token_counts) if test_token_counts else 0)
             )
             print(
                 "Evaluated token count metrics. Calculating token count results for validation...")
@@ -175,25 +253,36 @@ def analyze_structural_metrics(config: config, dataset: Dataset) -> StructuralMe
                 len(valid_token_counts) if valid_token_counts else -1,
                 min=min(valid_token_counts) if valid_token_counts else -1,
                 max=max(valid_token_counts) if valid_token_counts else -1,
-                std=_calc_std(valid_token_counts, sum(valid_token_counts) / len(valid_token_counts) if valid_token_counts else 0),
+                std=_calc_std(valid_token_counts, sum(
+                    valid_token_counts) / len(valid_token_counts) if valid_token_counts else 0),
             )
             token_overall_results = CountingResult(
                 mean=sum(overall_token_counts) /
                 len(overall_token_counts) if overall_token_counts else -1,
                 min=min(overall_token_counts) if overall_token_counts else -1,
                 max=max(overall_token_counts) if overall_token_counts else -1,
-                std=_calc_std(overall_token_counts, sum(overall_token_counts) / len(overall_token_counts) if overall_token_counts else 0),
+                std=_calc_std(overall_token_counts, sum(
+                    overall_token_counts) / len(overall_token_counts) if overall_token_counts else 0),
+            )
+
+            preprocessor_directive_overall_results = SplitNumbericalMetricsResults(
+                train=train_cnt_preprocessor_directives if dataset.has_splits() else -1,
+                test=test_cnt_preprocessor_directives if dataset.has_splits() else -1,
+                validation=valid_cnt_preprocessor_directives if dataset.has_splits() else -1,
+                overall=train_cnt_preprocessor_directives + test_cnt_preprocessor_directives +
+                valid_cnt_preprocessor_directives if dataset.has_splits() else -1
             )
 
         else:
-            nloc_overall, cyclomatic_complexity_overall = _get_metrics(
-                dataset.data or [], "Overall")
+            nloc_overall, cyclomatic_complexity_overall, token_overall, cnt_preprocessor_directives = _get_metrics(
+                dataset.data, "Overall")
             nloc_overall_results = CountingResult(
                 mean=sum(nloc_overall) /
                 len(nloc_overall) if nloc_overall else -1,
                 min=min(nloc_overall) if nloc_overall else -1,
                 max=max(nloc_overall) if nloc_overall else -1,
-                std=_calc_std(nloc_overall, sum(nloc_overall) / len(nloc_overall) if nloc_overall else 0)
+                std=_calc_std(nloc_overall, sum(nloc_overall) /
+                              len(nloc_overall) if nloc_overall else 0)
             )
             cyclomatic_overall_results = CountingResult(
                 mean=sum(cyclomatic_complexity_overall) /
@@ -202,8 +291,24 @@ def analyze_structural_metrics(config: config, dataset: Dataset) -> StructuralMe
                     cyclomatic_complexity_overall) if cyclomatic_complexity_overall else -1,
                 max=max(
                     cyclomatic_complexity_overall) if cyclomatic_complexity_overall else -1,
-                std=_calc_std(cyclomatic_complexity_overall, sum(cyclomatic_complexity_overall) / len(cyclomatic_complexity_overall) if cyclomatic_complexity_overall else 0)
+                std=_calc_std(cyclomatic_complexity_overall, sum(cyclomatic_complexity_overall) / len(
+                    cyclomatic_complexity_overall) if cyclomatic_complexity_overall else 0)
             )
+            token_overall_results = CountingResult(
+                mean=sum(token_overall) /
+                len(token_overall) if token_overall else -1,
+                min=min(token_overall) if token_overall else -1,
+                max=max(token_overall) if token_overall else -1,
+                std=_calc_std(token_overall, sum(token_overall) /
+                              len(token_overall) if token_overall else 0),
+            )
+            preprocessor_directive_overall_results = SplitNumbericalMetricsResults(
+                train=-1,
+                test=-1,
+                validation=-1,
+                overall=cnt_preprocessor_directives
+            )
+
         print("Evaluated LOC and Cyclomatic Complexity metrics.")
         nloc_split_results = SplitStatisticalMetricsResults(
             train=nloc_train_results if dataset.has_splits() else None,
@@ -232,4 +337,5 @@ def analyze_structural_metrics(config: config, dataset: Dataset) -> StructuralMe
         loc=nloc_split_results if config.analysis.structural_metrics.loc else None,
         cyclomatic_complexity=complexity_split_results if config.analysis.structural_metrics.cyclomatic_complexity else None,
         tokens=token_split_results if config.analysis.structural_metrics.tokens else None,
+        preprocessor_directives=preprocessor_directive_overall_results
     )
