@@ -1,0 +1,15 @@
+name	status	seconds	command
+BigVul	0	1401.661	vultrition -c examples/configs/bigvul.toml --run_analysis -o vultrition_results_bigvul.json
+CleanVul	0	76.387	vultrition -c examples/configs/cleanvul.toml --run_analysis -o vultrition_results_cleanvul.json
+DiverseVul	0	3768.716	vultrition -c examples/configs/diversevul.toml --run_analysis -o vultrition_results_diversevul.json
+ICVul	0	130.664	vultrition -c examples/configs/icvul.toml --run_analysis -o vultrition_results_icvul.json
+MegaVul_CPP	0	3891.641	vultrition -c examples/configs/megavul_cpp.toml --run_analysis -o vultrition_results_megavul_cpp.json
+MegaVul_Java	0	137.437	vultrition -c examples/configs/megavul_java.toml --run_analysis -o vultrition_results_megavul_java.json
+PrimeVul	0	5286.224	vultrition -c examples/configs/primevul.toml --run_analysis -o vultrition_results_primevul.json
+ReposVul_C	0	811.694	vultrition -c examples/configs/reposvul_c.toml --run_analysis -o vultrition_results_reposvul_c.json
+ReposVul_CPP	0	76.745	vultrition -c examples/configs/reposvul_cpp.toml --run_analysis -o vultrition_results_reposvul_cpp.json
+ReposVul_Java	0	74.735	vultrition -c examples/configs/reposvul_java.toml --run_analysis -o vultrition_results_reposvul_java.json
+ReposVul_Python	0	125.766	vultrition -c examples/configs/reposvul_python.toml --run_analysis -o vultrition_results_reposvul_python.json
+ReposVul_Split	0	3630.313	vultrition -c examples/configs/reposvul_split.toml --run_analysis -o vultrition_results_reposvul_split.json
+SecVulEval	0	204.574	vultrition -c examples/configs/secvuleval.toml --run_analysis -o vultrition_results_secvuleval.json
+TitanVul	0	593.307	vultrition -c examples/configs/titanvul.toml --run_analysis -o vultrition_results_titanvul.json

@@ -1,0 +1,103 @@
+{
+  "name": "CleanVul",
+  "version": "Score 4",
+  "description": "Toward High-Quality Function-Level Vulnerability Datasets via LLM-Based Noise Reduction",
+  "license": "NA",
+  "languages": "cpp",
+  "has_runable_code_or_test_cases": false,
+  "quality_metrics": {
+    "samples": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 12102
+    },
+    "completeness": {
+      "train": null,
+      "test": null,
+      "valid": null,
+      "overall": 0.12047595438770452
+    },
+    "diversity": {
+      "unique_cwes": {
+        "train": null,
+        "test": null,
+        "validation": null,
+        "overall": 76
+      },
+      "unique_projects": {
+        "train": null,
+        "test": null,
+        "validation": null,
+        "overall": 1473
+      }
+    },
+    "balance": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": 0.5
+    },
+    "timespan": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": [
+        "2008",
+        "2024"
+      ]
+    },
+    "uniqueness": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 0.19021649314162947
+    },
+    "cross_contamination": {
+      "train_test": -1,
+      "train_valid": -1,
+      "test_valid": -1
+    }
+  },
+  "structural_metrics": {
+    "loc": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 1,
+        "max": 531,
+        "mean": 53.864615683229815,
+        "std": 63.31610205157948
+      }
+    },
+    "tokens": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 7,
+        "max": 5586,
+        "mean": 562.7978020161956,
+        "std": 678.8457154533116
+      }
+    },
+    "cyclomatic_complexity": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 1,
+        "max": 183,
+        "mean": 11.52159827213823,
+        "std": 14.906268269779106
+      }
+    },
+    "preprocessor_directives": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 1044
+    }
+  }
+}

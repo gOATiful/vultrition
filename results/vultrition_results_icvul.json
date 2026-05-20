@@ -1,0 +1,103 @@
+{
+  "name": "ICVul",
+  "version": "3dc5504",
+  "description": "A Well-labeled C/C++ Vulnerability Dataset with Comprehensive Metadata and VCCs",
+  "license": "MIT",
+  "languages": "cpp",
+  "has_runable_code_or_test_cases": false,
+  "quality_metrics": {
+    "samples": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 15396
+    },
+    "completeness": {
+      "train": null,
+      "test": null,
+      "valid": null,
+      "overall": 1.0
+    },
+    "diversity": {
+      "unique_cwes": {
+        "train": null,
+        "test": null,
+        "validation": null,
+        "overall": 136
+      },
+      "unique_projects": {
+        "train": null,
+        "test": null,
+        "validation": null,
+        "overall": 677
+      }
+    },
+    "balance": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": 0.40763834762275913
+    },
+    "timespan": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": [
+        "1999",
+        "2024"
+      ]
+    },
+    "uniqueness": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 0.2807222655235126
+    },
+    "cross_contamination": {
+      "train_test": -1,
+      "train_valid": -1,
+      "test_valid": -1
+    }
+  },
+  "structural_metrics": {
+    "loc": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 1,
+        "max": 3510,
+        "mean": 80.07217580103955,
+        "std": 158.15243854239324
+      }
+    },
+    "tokens": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 5,
+        "max": 52983,
+        "mean": 927.6217848791894,
+        "std": 2036.2167773586423
+      }
+    },
+    "cyclomatic_complexity": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 1,
+        "max": 545,
+        "mean": 13.238954429794125,
+        "std": 22.453139111280244
+      }
+    },
+    "preprocessor_directives": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 2230
+    }
+  }
+}

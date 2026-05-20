@@ -1,13 +1,16 @@
 [dataset]
-name="DiverseVul"
-description = "A New Vulnerable Source Code Dataset for Deep Learning Based Vulnerability Detection"
-version = "2023-07-02"
-license = "NA"
+name="ReposVul"
+description = "A Repository-Level High-Quality Vulnerability Dataset"
+version = "3dc5504"
+license = ""
 languages="cpp"
 has_runable_code_or_test_cases=false
 
 [dataset.files]
-data="datasets/diversevul/diversevul.jsonl"
+train="datasets/reposvul/train_c_cpp_repository2.jsonl"
+test="datasets/reposvul/test_c_cpp_repository2.jsonl"
+valid="datasets/reposvul/valid_c_cpp_repository2.jsonl"
+
 
 [dataset.fields]
 function="function"

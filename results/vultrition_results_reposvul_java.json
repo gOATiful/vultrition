@@ -1,0 +1,103 @@
+{
+  "name": "ReposVul Java",
+  "version": "67f5300",
+  "description": "A Repository-Level High-Quality Vulnerability Dataset",
+  "license": "",
+  "languages": "c",
+  "has_runable_code_or_test_cases": false,
+  "quality_metrics": {
+    "samples": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 3042
+    },
+    "completeness": {
+      "train": null,
+      "test": null,
+      "valid": null,
+      "overall": 1.0
+    },
+    "diversity": {
+      "unique_cwes": {
+        "train": null,
+        "test": null,
+        "validation": null,
+        "overall": 96
+      },
+      "unique_projects": {
+        "train": null,
+        "test": null,
+        "validation": null,
+        "overall": 204
+      }
+    },
+    "balance": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": 0.056870479947403026
+    },
+    "timespan": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": [
+        "2010",
+        "2023"
+      ]
+    },
+    "uniqueness": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 0.11538461538461539
+    },
+    "cross_contamination": {
+      "train_test": -1,
+      "train_valid": -1,
+      "test_valid": -1
+    }
+  },
+  "structural_metrics": {
+    "loc": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 1,
+        "max": 246,
+        "mean": 12.239931740614335,
+        "std": 18.784954476152148
+      }
+    },
+    "tokens": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 19,
+        "max": 115272,
+        "mean": 3029.8523997370153,
+        "std": 7247.536459333249
+      }
+    },
+    "cyclomatic_complexity": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 1,
+        "max": 63,
+        "mean": 2.35221843003413,
+        "std": 3.916644737536185
+      }
+    },
+    "preprocessor_directives": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 0
+    }
+  }
+}

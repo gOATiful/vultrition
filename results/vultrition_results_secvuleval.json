@@ -1,0 +1,103 @@
+{
+  "name": "SecVulEval",
+  "version": "bde3e7c",
+  "description": "SecVulEval is a collection of real-world C/C++ vulnerabilities.",
+  "license": "NA",
+  "languages": "cpp",
+  "has_runable_code_or_test_cases": false,
+  "quality_metrics": {
+    "samples": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 25440
+    },
+    "completeness": {
+      "train": null,
+      "test": null,
+      "valid": null,
+      "overall": 1.0
+    },
+    "diversity": {
+      "unique_cwes": {
+        "train": null,
+        "test": null,
+        "validation": null,
+        "overall": 145
+      },
+      "unique_projects": {
+        "train": null,
+        "test": null,
+        "validation": null,
+        "overall": 707
+      }
+    },
+    "balance": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": 0.43231132075471695
+    },
+    "timespan": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": [
+        "1999",
+        "2024"
+      ]
+    },
+    "uniqueness": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 0.23977987421383648
+    },
+    "cross_contamination": {
+      "train_test": -1,
+      "train_valid": -1,
+      "test_valid": -1
+    }
+  },
+  "structural_metrics": {
+    "loc": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 1,
+        "max": 6291,
+        "mean": 75.94467098424882,
+        "std": 156.08329513363887
+      }
+    },
+    "tokens": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 6,
+        "max": 52983,
+        "mean": 853.1340015723271,
+        "std": 1793.3841718662784
+      }
+    },
+    "cyclomatic_complexity": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 1,
+        "max": 1226,
+        "mean": 12.397970634994856,
+        "std": 23.04004811351555
+      }
+    },
+    "preprocessor_directives": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 3628
+    }
+  }
+}

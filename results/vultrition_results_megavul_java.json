@@ -1,0 +1,103 @@
+{
+  "name": "MegaVul",
+  "version": "bde3e7c",
+  "description": "The largest, high-quality, extensible, continuously updated, C/C++/Java function-level vulnerability dataset.",
+  "license": "MIT",
+  "languages": "cpp",
+  "has_runable_code_or_test_cases": false,
+  "quality_metrics": {
+    "samples": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 41949
+    },
+    "completeness": {
+      "train": null,
+      "test": null,
+      "valid": null,
+      "overall": 1.0
+    },
+    "diversity": {
+      "unique_cwes": {
+        "train": null,
+        "test": null,
+        "validation": null,
+        "overall": 115
+      },
+      "unique_projects": {
+        "train": null,
+        "test": null,
+        "validation": null,
+        "overall": 362
+      }
+    },
+    "balance": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": 0.057998998784238004
+    },
+    "timespan": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": [
+        "2010",
+        "2024"
+      ]
+    },
+    "uniqueness": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 0.7544399151350449
+    },
+    "cross_contamination": {
+      "train_test": -1,
+      "train_valid": -1,
+      "test_valid": -1
+    }
+  },
+  "structural_metrics": {
+    "loc": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 1,
+        "max": 678,
+        "mean": 12.499778793688247,
+        "std": 15.93868170359261
+      }
+    },
+    "tokens": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 3,
+        "max": 8117,
+        "mean": 122.57639037879329,
+        "std": 178.10872743484006
+      }
+    },
+    "cyclomatic_complexity": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 1,
+        "max": 156,
+        "mean": 3.1416457749594455,
+        "std": 4.144215763367287
+      }
+    },
+    "preprocessor_directives": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 0
+    }
+  }
+}

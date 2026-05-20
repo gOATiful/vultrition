@@ -3,7 +3,7 @@ requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
 
 [project]
-name = "vds-nutrition-labels"
+name = "vultrition"
 version = "0.1.0"
 description = "A CLI tool for building vulnerability dataset nutrition labels."
 readme = "README.md"
@@ -58,7 +58,7 @@ Repository = "https://github.com/gOATiful/Vulnerability-Dataset-Nutrition-Labels
 Issues = "https://github.com/gOATiful/Vulnerability-Dataset-Nutrition-Labels/issues"
 
 [project.scripts]
-vds-nutrition-labels = "vds_nutrition_labels.cli:main"
+vultrition = "vultrition.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/vds_nutrition_labels"]
+packages = ["src/vultrition"]

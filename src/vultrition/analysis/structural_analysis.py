@@ -5,9 +5,9 @@ from tqdm import tqdm
 from pygments.lexers import guess_lexer
 from pygments.util import ClassNotFound
 
-from vds_nutrition_labels.models import config
-from vds_nutrition_labels.models.dataset import Dataset, Sample
-from vds_nutrition_labels.models.results import CountingResult, SplitNumbericalMetricsResults, SplitStatisticalMetricsResults, StructuralMetricsResults
+from vultrition.models import config
+from vultrition.models.dataset import Dataset, Sample
+from vultrition.models.results import CountingResult, SplitNumbericalMetricsResults, SplitStatisticalMetricsResults, StructuralMetricsResults
 
 
 LANGUAGE_TO_FILENAME = {

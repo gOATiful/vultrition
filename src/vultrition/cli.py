@@ -1,13 +1,14 @@
 from __future__ import annotations
 from dataclasses import asdict
 import json
+import logging
 import sys
 
 
-from vds_nutrition_labels.commands.load_config import load_config, print_config
-from vds_nutrition_labels.commands.create_config import create_config_template
-from vds_nutrition_labels.commands.parser import get_parser
-from vds_nutrition_labels.commands.run_analysis import run_full_analysis
+from vultrition.commands.load_config import load_config, print_config
+from vultrition.commands.create_config import create_config_template
+from vultrition.commands.parser import get_parser
+from vultrition.commands.run_analysis import run_full_analysis
 
 
 def main() -> int:
@@ -38,11 +39,10 @@ def main() -> int:
             print_config(config)
 
         if args.run_analysis:
-            results = run_full_analysis(config)
-            print(results)
+            results = run_full_analysis(config, args.verbose)
             with open(args.output, "w") as f:
                 json.dump(asdict(results), f, indent=2)
-            
+            logging.info(f"Analysis results saved to {args.output}")
         else:
             print(
                 "No analysis option specified. Use --run_analysis to run the full analysis pipeline.")
@@ -54,4 +54,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     sys.exit(main())

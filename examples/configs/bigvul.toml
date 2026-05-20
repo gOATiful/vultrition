@@ -1,6 +1,6 @@
 [dataset]
 name="BigVul"
-description = "Dataset of annotated images"
+description = "A C/C++ Code Vulnerability Dataset with Code Changes and CVE Summaries"
 
 version = "1.0.0"
 license = "MIT"
@@ -24,8 +24,8 @@ completeness=true
 diversity=true
 balance=true
 timespan=true
-uniqueness=false
-cross_contamination=false
+uniqueness=true
+cross_contamination=true
 
 [dataset.analysis.structural_metrics]
 loc=true

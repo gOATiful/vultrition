@@ -5,10 +5,10 @@ import os
 import shutil
 from typing import Tuple
 
-from vds_nutrition_labels.models import config
-from vds_nutrition_labels.models.dataset import Dataset, Sample
-from vds_nutrition_labels.models.results import CrossContaminationResults, DiversityResults, QualityMetricsResults, SplitNumbericalMetricsResults, StructuralMetricsResults, CompletenessResults, TimeSpanResults
-from vds_nutrition_labels.analysis.uniqueness_analysis import run_uniqueness_detection, UniquenessConfig
+from vultrition.models import config
+from vultrition.models.dataset import Dataset, Sample
+from vultrition.models.results import CrossContaminationResults, DiversityResults, QualityMetricsResults, SplitNumbericalMetricsResults, StructuralMetricsResults, CompletenessResults, TimeSpanResults
+from vultrition.analysis.uniqueness_analysis import run_uniqueness_detection, UniquenessConfig
 
 
 REQUIRED_FIELDS = {
@@ -18,6 +18,7 @@ REQUIRED_FIELDS = {
     "cwe",
     "project",
 }
+
 
 def _create_source_files(samples: list[Sample], split_name: str, file_name: str, extension: str):
     os.makedirs(f"uniqueness_source/{split_name}", exist_ok=True)
@@ -44,7 +45,7 @@ def _get_file_extension(config: config) -> str:
 
 
 def _eval_uniqueness(config: config, dataset: Dataset) -> float:
-    
+
     splits = {
         "train": dataset.train or [],
         "test": dataset.test or [],
@@ -72,7 +73,24 @@ def _eval_uniqueness(config: config, dataset: Dataset) -> float:
                 stats = json.load(f)
             scores[split_name] = stats['true_uniqueness_score']
             shutil.rmtree(f"uniqueness_source/{split_name}")
-            shutil.rmtree("uniqueness_results")
+        
+        
+        for _, samples in splits.items():
+            _create_source_files(samples, "overall", split_name, extension)
+            
+        print("Running uniqueness detection for split:", "overall")
+        run_uniqueness_detection(
+                f"uniqueness_source/overall",
+                UniquenessConfig(
+                    output_dir="uniqueness_results",
+                ),
+            )
+
+        with open(f"uniqueness_results/uniqueness_metrics.json", "r", encoding="utf-8") as f:
+            stats = json.load(f)
+        scores["overall"] = stats['true_uniqueness_score']
+        shutil.rmtree(f"uniqueness_source")
+        shutil.rmtree("uniqueness_results")
         return scores
 
     else:
@@ -123,6 +141,12 @@ def _eval_cross_contamination(config: config, dataset: Dataset) -> CrossContamin
 
     for split_name in cross_splits:
         print("Running uniqueness detection for split:", split_name)
+        run_uniqueness_detection(
+            f"uniqueness_source/{split_name}",
+            UniquenessConfig(
+                output_dir="uniqueness_results",
+            ),
+        )
         cnt = 0
         with open(f"uniqueness_results/duplicate_pairs.csv", "r") as fin:
             content = fin.readlines()
@@ -139,7 +163,8 @@ def _eval_cross_contamination(config: config, dataset: Dataset) -> CrossContamin
         scores[split_name] = 1 - \
             (cnt / len(os.listdir(f"uniqueness_source/{split_name}")))
         shutil.rmtree(f"uniqueness_source/{split_name}")
-        shutil.rmtree("uniqueness_results")
+
+    shutil.rmtree("uniqueness_results")
 
     return scores
 
@@ -169,9 +194,6 @@ def _eval_diversity(samples: list[Sample]) -> Tuple[float, float]:
     return len(cwes)if samples else 0.0, len(projects) if samples else 0.0
 
 
-
-
-
 def has_all_required_fields(sample: dict) -> bool:
     for field in REQUIRED_FIELDS:
         if field not in sample:
@@ -189,6 +211,7 @@ def has_all_required_fields(sample: dict) -> bool:
             return False
 
     return True
+
 
 def _eval_completeness(samples: list[Sample]) -> float:
     if not samples:
@@ -287,39 +310,47 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
         unique_cwes_train = unique_cwes_test = unique_cwes_valid = None
         unique_projects_train = unique_projects_test = unique_projects_valid = None
         balance_train = balance_test = balance_valid = None
-    
-    
-    print("Evaluating uniqueness and cross-contamination metrics...")
-    print("creating source folders...")
+
     if dataset.has_splits():
-        uniqueness = _eval_uniqueness(config, dataset)
-        print(f"uniqueness: {uniqueness}")
-        cross_contamination = _eval_cross_contamination(config, dataset)
-        print(f"cross_contamination: {cross_contamination}")
-        shutil.rmtree("uniqueness_source")
+        if config.analysis.quality_metrics.uniqueness:
+            print("Evaluating uniqueness metrics...")
+            uniqueness = _eval_uniqueness(config, dataset)
+            print(f"uniqueness: {uniqueness}")
+        if config.analysis.quality_metrics.cross_contamination:
+            print("Evaluating cross-contamination...")
+            cross_contamination = _eval_cross_contamination(config, dataset)
+            print(f"cross_contamination: {cross_contamination}")
+            if os.path.exists("uniqueness_source"):
+                shutil.rmtree("uniqueness_source")
+            if os.path.exists("uniqueness_results"):
+                shutil.rmtree("uniqueness_results")
+
         uniqueness_results = SplitNumbericalMetricsResults(
             train=uniqueness["train"],
             test=uniqueness["test"],
             validation=uniqueness["validation"],
-            overall=-1,
+            overall=uniqueness["overall"],
         )
     else:
-        uniqueness_score = _eval_uniqueness(config, dataset)
-        print(f"uniqueness: {uniqueness_score}")
-        uniqueness_results = SplitNumbericalMetricsResults(
-            train=-1,
-            test=-1,
-            validation=-1,
-            overall=uniqueness_score["overall"],
-        )
-        cross_contamination = {
-            "train_test": -1,
-            "train_validation": -1,
-            "test_validation": -1,
-        }
-    
-    overall_samples_cnt = len(dataset.train) + len(dataset.test) + len(dataset.validation) if dataset.has_splits() else len(dataset.data)
-    
+        if config.analysis.quality_metrics.uniqueness:
+            print("Evaluating uniqueness metrics...")
+            uniqueness_score = _eval_uniqueness(config, dataset)
+            print(f"uniqueness: {uniqueness_score}")
+            uniqueness_results = SplitNumbericalMetricsResults(
+                train=-1,
+                test=-1,
+                validation=-1,
+                overall=uniqueness_score["overall"],
+            )
+            cross_contamination = {
+                "train_test": -1,
+                "train_validation": -1,
+                "test_validation": -1,
+            }
+
+    overall_samples_cnt = len(dataset.train) + len(dataset.test) + len(
+        dataset.validation) if dataset.has_splits() else len(dataset.data)
+
     return QualityMetricsResults(
         samples=SplitNumbericalMetricsResults(
             train=len(dataset.train) if dataset.train else -1,

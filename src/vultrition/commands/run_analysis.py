@@ -1,9 +1,9 @@
-from vds_nutrition_labels.commands.run_meta_analysis import run_meta_analysis
-from vds_nutrition_labels.commands.run_quality_analysis import run_quality_analysis
-from vds_nutrition_labels.commands.run_structural_analysis import run_structural_analysis
-from vds_nutrition_labels.data_laoading.dataset_loader import load_dataset_from_config
-from vds_nutrition_labels.models import config
-from vds_nutrition_labels.models.dataset import Dataset
+from vultrition.commands.run_meta_analysis import run_meta_analysis
+from vultrition.commands.run_quality_analysis import run_quality_analysis
+from vultrition.commands.run_structural_analysis import run_structural_analysis
+from vultrition.data_laoading.dataset_loader import load_dataset_from_config
+from vultrition.models import config
+from vultrition.models.dataset import Dataset
 
 
 def print_samples(dataset: Dataset):
@@ -20,11 +20,14 @@ def print_samples(dataset: Dataset):
         print(f"  Project: {sample.project}")
 
 
-def run_full_analysis(config: config) -> None:
+def run_full_analysis(config: config, verbose = False) -> None:
 
     dataset = load_dataset_from_config(config)
+    
     print(dataset.summary())
-    print_samples(dataset)
+    
+    if verbose:
+        print_samples(dataset)
 
     meta_results = run_meta_analysis(config)
 

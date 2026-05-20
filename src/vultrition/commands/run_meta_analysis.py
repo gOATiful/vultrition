@@ -1,7 +1,7 @@
 
 
-from vds_nutrition_labels.models import config
-from vds_nutrition_labels.models.results import AnalysisResults
+from vultrition.models import config
+from vultrition.models.results import AnalysisResults
 
 
 def run_meta_analysis(config: config) -> None:
