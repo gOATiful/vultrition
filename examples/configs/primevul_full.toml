@@ -1,7 +1,7 @@
 [dataset]
 name="PrimeVul"
 description = "PrimeVul is a new dataset for vulnerability detection, aiming to train and evaluate code language models in the realistic vulnerability detection settings."
-version = "1.0.0"
+version = "v0.1"
 license = "MIT"
 languages="cpp"
 has_runable_code_or_test_cases=false

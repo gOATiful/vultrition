@@ -10,6 +10,9 @@ uniqueness_source/
 external/
 util_scripts/
 cache/
+sync.sh
+format.ipynb
+execution_times.tsv
 
 ### direnv ###
 .direnv

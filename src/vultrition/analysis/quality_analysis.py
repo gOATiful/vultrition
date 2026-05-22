@@ -1,14 +1,13 @@
-
 import itertools
-import json
-import os
-import shutil
 from typing import Tuple
 
+from vultrition.analysis.clustering_analysis import compute_embedding_cluster_diversity, print_cluster_diversity_summary
+from vultrition.analysis.cross_contamination_analysis import embedding_dataset_similarity
+from vultrition.analysis.similarity_analysis import create_code_embeddings
 from vultrition.models import config
+from vultrition.models import results
 from vultrition.models.dataset import Dataset, Sample
 from vultrition.models.results import CrossContaminationResults, DiversityResults, QualityMetricsResults, SplitNumbericalMetricsResults, StructuralMetricsResults, CompletenessResults, TimeSpanResults
-from vultrition.analysis.uniqueness_analysis import run_uniqueness_detection, UniquenessConfig
 
 
 REQUIRED_FIELDS = {
@@ -20,165 +19,19 @@ REQUIRED_FIELDS = {
 }
 
 
-def _create_source_files(samples: list[Sample], split_name: str, file_name: str, extension: str):
-    os.makedirs(f"uniqueness_source/{split_name}", exist_ok=True)
-    for i, sample in enumerate(samples):
-        with open(f"uniqueness_source/{split_name}/{file_name}_{i}.{extension}", "w", encoding="utf-8") as f:
-            if sample.function and isinstance(sample.function, str):
-                f.write(sample.function + "\n")
-
-
-def _get_file_extension(config: config) -> str:
-    file_extension_mapping = {
-        "cpp": "cpp",
-        "c": "c",
-        "java": "java",
-        "python": "py",
-    }
-
-    extension = ""
-    for lang, ext in file_extension_mapping.items():
-        if lang in config.languages.lower():
-            extension = ext
-            break
-    return extension
-
-
-def _eval_uniqueness(config: config, dataset: Dataset) -> float:
-
-    splits = {
-        "train": dataset.train or [],
-        "test": dataset.test or [],
-        "validation": dataset.validation or []
-    }
-
-    extension = _get_file_extension(config)
-
-    if dataset.has_splits():
-        for split_name, samples in splits.items():
-            _create_source_files(samples, split_name, split_name, extension)
-
-        scores = {"train": 0.0, "test": 0.0, "validation": 0.0}
-
-        for split_name in splits.keys():
-            print("Running uniqueness detection for split:", split_name)
-            run_uniqueness_detection(
-                f"uniqueness_source/{split_name}",
-                UniquenessConfig(
-                    output_dir="uniqueness_results",
-                ),
-            )
-
-            with open(f"uniqueness_results/uniqueness_metrics.json", "r", encoding="utf-8") as f:
-                stats = json.load(f)
-            scores[split_name] = stats['true_uniqueness_score']
-            shutil.rmtree(f"uniqueness_source/{split_name}")
-        
-        
-        for _, samples in splits.items():
-            _create_source_files(samples, "overall", split_name, extension)
-            
-        print("Running uniqueness detection for split:", "overall")
-        run_uniqueness_detection(
-                f"uniqueness_source/overall",
-                UniquenessConfig(
-                    output_dir="uniqueness_results",
-                ),
-            )
-
-        with open(f"uniqueness_results/uniqueness_metrics.json", "r", encoding="utf-8") as f:
-            stats = json.load(f)
-        scores["overall"] = stats['true_uniqueness_score']
-        shutil.rmtree(f"uniqueness_source")
-        shutil.rmtree("uniqueness_results")
-        return scores
-
-    else:
-        _create_source_files(dataset.data or [],
-                             "overall", "overall", extension)
-        print("Running uniqueness detection for overall dataset...")
-        run_uniqueness_detection(
-            f"uniqueness_source/overall",
-            UniquenessConfig(
-                output_dir="uniqueness_results",
-            ),
-        )
-
-        with open(f"uniqueness_results/uniqueness_metrics.json", "r", encoding="utf-8") as f:
-            stats = json.load(f)
-        score = stats['true_uniqueness_score']
-        shutil.rmtree(f"uniqueness_source/overall")
-        shutil.rmtree("uniqueness_results")
-        return {
-            "overall": score
-        }
-
-
-def _eval_cross_contamination(config: config, dataset: Dataset) -> CrossContaminationResults:
-    splits = {
-        "train": dataset.train or [],
-        "test": dataset.test or [],
-        "validation": dataset.validation or []
-    }
-
-    extension = _get_file_extension(config)
-    combos = list(itertools.combinations(splits.keys(), 2))
-    cross_splits = [f"{s1}_{s2}" for s1, s2 in combos]
-
-    scores = {k: 0.0 for k in cross_splits}
-
-    for split1, split2 in combos:
-        os.makedirs(f"uniqueness_source/{split1}_{split2}", exist_ok=True)
-        for i, sample in enumerate(splits[split1]):
-            with open(f"uniqueness_source/{split1}_{split2}/{split1}_{i}.{extension}", "w", encoding="utf-8") as f:
-                if sample.function and isinstance(sample.function, str):
-                    f.write(sample.function + "\n")
-
-        for j, sample2 in enumerate(splits[split2]):
-            with open(f"uniqueness_source/{split1}_{split2}/{split2}_{j}.{extension}", "w", encoding="utf-8") as f:
-                if sample2.function and isinstance(sample2.function, str):
-                    f.write(sample2.function + "\n")
-
-    for split_name in cross_splits:
-        print("Running uniqueness detection for split:", split_name)
-        run_uniqueness_detection(
-            f"uniqueness_source/{split_name}",
-            UniquenessConfig(
-                output_dir="uniqueness_results",
-            ),
-        )
-        cnt = 0
-        with open(f"uniqueness_results/duplicate_pairs.csv", "r") as fin:
-            content = fin.readlines()
-            if len(content) == 1:  # no duplicates found
-                scores[split_name] = 1
-                continue
-            content = content[1:]
-            for l in content:
-                file1, file2 = l.split(",")[:2]
-                # only count cross-split duplicates
-                if file1.split("_")[0] != file2.split("_")[0]:
-                    cnt += 1
-
-        scores[split_name] = 1 - \
-            (cnt / len(os.listdir(f"uniqueness_source/{split_name}")))
-        shutil.rmtree(f"uniqueness_source/{split_name}")
-
-    shutil.rmtree("uniqueness_results")
-
-    return scores
-
-
 def _eval_balance(samples: list[Sample]) -> float:
     if not samples:
         return 0.0
     vuln = 0
+    non_vuln = 0
     for sample in samples:
         if sample.label is not None:
             if sample.label:
                 vuln += 1
-    total_samples = len(samples)
-    balance_score = vuln/total_samples if total_samples > 0 else 0.0
+            else:
+                non_vuln += 1
+
+    balance_score = vuln/non_vuln
     return balance_score
 
 
@@ -227,6 +80,75 @@ def _eval_timespan(samples: list[Sample]) -> Tuple[str, str]:
             if len(parts) >= 3 and parts[1].isdigit():
                 cve_years.append(int(parts[1]))
     return str(min(cve_years)) if cve_years else "-", str(max(cve_years)) if cve_years else "-"
+
+
+def _eval_uniqueness(dataset_embeddings: dict) -> dict:
+
+    scores = {"train": -1, "test": -1, "validation": -1, "overall": -1}
+    for split_name, embeddings in dataset_embeddings.items():
+        print(f"Computing uniqueness for split: {split_name}")
+        r = compute_embedding_cluster_diversity(
+            embeddings,
+            min_cluster_size=10,
+            min_samples=1,
+        )
+        print_cluster_diversity_summary(r)
+        scores[split_name] = r.diversity.diversity_score
+
+    return scores
+
+    # scores = {"train": -1, "test": -1, "validation": -1, "overall": -1}
+
+    # if dataset.has_splits():
+    #     splits = {
+    #         "validation": dataset.validation or [],
+    #         "train": dataset.train or [],
+    #         "test": dataset.test or [],
+    #     }
+
+    #     for split_name, samples in splits.items():
+    #         print("create embeddings for split:", split_name)
+    #         embeddings = create_code_embeddings(samples)
+    #         print("compute cluster diversity for split:", split_name)
+    #         r = compute_embedding_cluster_diversity(
+    #             embeddings,
+    #             min_cluster_size=10,
+    #             min_samples=1,
+    #         )
+    #         print(f"Cluster diversity results for {split_name}: {r}")
+    #         scores[split_name] = r.diversity.diversity_score
+
+    # data = dataset.data if not dataset.has_splits(
+    # ) else [*dataset.train, *dataset.test, *dataset.validation]
+    # print("create embeddings for split:", "overall")
+    # embeddings = create_code_embeddings(data)
+    # print("compute cluster diversity for split:", "overall")
+    # r = compute_embedding_cluster_diversity(
+    #     embeddings,
+    #     min_cluster_size=10,
+    #     min_samples=1,
+    # )
+    # print_cluster_diversity_summary(r)
+    # print(f"Cluster diversity results for overall: {r}")
+    # scores["overall"] = r.diversity.diversity_score
+    # return scores
+
+
+def _eval_cross_contamination(split_embeddings: dict) -> dict:
+    splits = ["train", "test", "validation"]
+    combos = list(itertools.combinations(splits, 2))
+    cross_splits = [f"{s1}_{s2}" for s1, s2 in combos]
+    scores = {k: 0.0 for k in cross_splits}
+    for s1, s2 in combos:
+        A = split_embeddings.get(s1, [])
+        B = split_embeddings.get(s2, [])
+        if len(A) == 0 or len(B) == 0:
+            print(f"Skipping cross-contamination analysis for {s1} and {s2} due to empty embeddings.")
+            continue
+        summary = embedding_dataset_similarity(A, B)
+        scores[f"{s1}_{s2}"] = summary["symmetric_similarity_score"]
+
+    return scores
 
 
 def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetricsResults:
@@ -311,42 +233,53 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
         unique_projects_train = unique_projects_test = unique_projects_valid = None
         balance_train = balance_test = balance_valid = None
 
-    if dataset.has_splits():
+    cross_contamination = {
+        "train_test": -1,
+        "train_validation": -1,
+        "test_validation": -1,
+    }
+
+    uniqueness = {
+        "train": -1,
+        "test": -1,
+        "validation": -1,
+        "overall": -1,
+    }
+
+    if config.analysis.quality_metrics.cross_contamination or config.analysis.quality_metrics.uniqueness:
+        print("Creating code embeddings for uniqueness and cross-contamination analysis...")
+        dataset_embeddings = {}
+        if dataset.has_splits():
+            print("Creating code embeddings for train split...")
+            dataset_embeddings["train"] = create_code_embeddings(
+                dataset.train or [])
+            print("Creating code embeddings for test split...")
+            dataset_embeddings["test"] = create_code_embeddings(
+                dataset.test or [])
+            print("Creating code embeddings for validation split...")
+            dataset_embeddings["validation"] = create_code_embeddings(
+                dataset.validation or [])
+        print("Creating code embeddings for overall dataset...")
+        dataset_embeddings["overall"] = create_code_embeddings(dataset.data if not dataset.has_splits() else [
+                                                               *dataset.train, 
+                                                               *dataset.test, 
+                                                               *dataset.validation])
+
         if config.analysis.quality_metrics.uniqueness:
             print("Evaluating uniqueness metrics...")
-            uniqueness = _eval_uniqueness(config, dataset)
+            uniqueness = _eval_uniqueness(dataset_embeddings)
             print(f"uniqueness: {uniqueness}")
         if config.analysis.quality_metrics.cross_contamination:
             print("Evaluating cross-contamination...")
-            cross_contamination = _eval_cross_contamination(config, dataset)
+            cross_contamination = _eval_cross_contamination(dataset_embeddings)
             print(f"cross_contamination: {cross_contamination}")
-            if os.path.exists("uniqueness_source"):
-                shutil.rmtree("uniqueness_source")
-            if os.path.exists("uniqueness_results"):
-                shutil.rmtree("uniqueness_results")
 
         uniqueness_results = SplitNumbericalMetricsResults(
-            train=uniqueness["train"],
-            test=uniqueness["test"],
-            validation=uniqueness["validation"],
-            overall=uniqueness["overall"],
+            train=uniqueness["train"] or -1,
+            test=uniqueness["test"] or -1,
+            validation=uniqueness["validation"] or -1,
+            overall=uniqueness["overall"] or -1,
         )
-    else:
-        if config.analysis.quality_metrics.uniqueness:
-            print("Evaluating uniqueness metrics...")
-            uniqueness_score = _eval_uniqueness(config, dataset)
-            print(f"uniqueness: {uniqueness_score}")
-            uniqueness_results = SplitNumbericalMetricsResults(
-                train=-1,
-                test=-1,
-                validation=-1,
-                overall=uniqueness_score["overall"],
-            )
-            cross_contamination = {
-                "train_test": -1,
-                "train_validation": -1,
-                "test_validation": -1,
-            }
 
     overall_samples_cnt = len(dataset.train) + len(dataset.test) + len(
         dataset.validation) if dataset.has_splits() else len(dataset.data)
@@ -382,8 +315,8 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
         timespan=timespan_results,
         uniqueness=uniqueness_results,
         cross_contamination=CrossContaminationResults(
-            train_test=cross_contamination["train_test"],
-            train_valid=cross_contamination["train_validation"],
-            test_valid=cross_contamination["test_validation"],
+            train_test=cross_contamination["train_test"] or -1,
+            train_valid=cross_contamination["train_validation"] or -1,
+            test_valid=cross_contamination["test_validation"] or -1,
         )
     )

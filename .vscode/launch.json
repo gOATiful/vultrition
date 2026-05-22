@@ -5,12 +5,20 @@
   "version": "0.2.0",
   "configurations": [ 
     {
-      "name": "Python Debugger: Current File",
+      "name": "Run Vultrition on primevul config",
       "type": "debugpy",
       "request": "launch",
       "program": "src/vultrition/cli.py",
       "console": "integratedTerminal",
-      "args": ["-c", "examples/configs/primevul.toml", "--run_analysis", "-o", "vds_nutrition_label_data_primevul.json"],
-    }
+      "args": ["-c", "examples/configs/primevul.toml", "--run_analysis", "-o", "vultrition_results_primevul.json"],
+    },
+      {
+        "name": "Python Debugger: Current File (with args)",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${file}",
+        "console": "integratedTerminal",
+        "args": [],
+      }
   ]
 }

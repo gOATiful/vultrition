@@ -59,6 +59,7 @@ run_timed "ICVul" vultrition -c examples/configs/icvul.toml --run_analysis -o vu
 run_timed "MegaVul_CPP" vultrition -c examples/configs/megavul_cpp.toml --run_analysis -o vultrition_results_megavul_cpp.json
 run_timed "MegaVul_Java" vultrition -c examples/configs/megavul_java.toml --run_analysis -o vultrition_results_megavul_java.json
 run_timed "PrimeVul" vultrition -c examples/configs/primevul.toml --run_analysis -o vultrition_results_primevul.json
+run_timed "PrimeVul" vultrition -c examples/configs/primevul_paired.toml --run_analysis -o vultrition_results_primevul_paired.json
 run_timed "ReposVul_C" vultrition -c examples/configs/reposvul_c.toml --run_analysis -o vultrition_results_reposvul_c.json
 run_timed "ReposVul_CPP" vultrition -c examples/configs/reposvul_cpp.toml --run_analysis -o vultrition_results_reposvul_cpp.json
 run_timed "ReposVul_Java" vultrition -c examples/configs/reposvul_java.toml --run_analysis -o vultrition_results_reposvul_java.json

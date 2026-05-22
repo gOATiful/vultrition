@@ -23,7 +23,10 @@ dependencies = [
   "lizard>=1.17.10",
   "tqdm>=4.66.0",
   "tomli>=2.0.0",
-  "pygments>=2.20.0"
+  "pygments>=2.20.0",
+  "torch",
+  "transformers",
+  "scikit-learn",
 ]
 
 classifiers = [
