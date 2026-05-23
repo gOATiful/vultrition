@@ -1,6 +1,8 @@
 import lizard
 import tiktoken
 from tqdm import tqdm
+import os
+from concurrent.futures import ProcessPoolExecutor
 
 from pygments.lexers import guess_lexer
 from pygments.util import ClassNotFound
@@ -121,6 +123,107 @@ def _get_metrics(samples: list[Sample], label: str, count_tokens: bool = True, c
     return loc_values, cyclomatic_complexity_values, token_counts, cnt_preprocessor_directives
 
 
+
+
+
+def _analyze_sample_metrics(args):
+    source, count_tokens, count_structural = args
+
+    loc = None
+    cyclomatic_complexity = None
+    token_count = None
+    cnt_preprocessor_directives = 0
+    warning = None
+
+    try:
+        if count_structural:
+            language = detect_language_pygments(source)
+
+            if language == "unknown":
+                language = "cpp"
+
+            filename = LANGUAGE_TO_FILENAME.get(language, "sample.cpp")
+
+            analysis = lizard.analyze_file.analyze_source_code(filename, source)
+
+            if analysis and len(analysis.function_list) > 0:
+                func = analysis.function_list[0]
+                loc = func.nloc
+
+                if language in {"c", "cpp"} and not has_preprocessor_directives(source):
+                    cyclomatic_complexity = func.cyclomatic_complexity
+                else:
+                    cnt_preprocessor_directives = 1
+
+        if count_tokens:
+            token_count = _count_tokens(source)
+
+    except Exception as exc:
+        warning = str(exc)
+
+    return loc, cyclomatic_complexity, token_count, cnt_preprocessor_directives, warning
+
+
+def _get_metrics_mpu(
+    samples: list[Sample],
+    label: str,
+    count_tokens: bool = True,
+    count_structural: bool = True,
+) -> tuple[list[int], list[int], list[int], int]:
+    if not samples:
+        return [], [], [], 0
+
+    loc_values = []
+    cyclomatic_complexity_values = []
+    token_counts = []
+    cnt_preprocessor_directives = 0
+
+    sources = [
+        (sample.function, count_tokens, count_structural)
+        for sample in samples
+    ]
+
+    max_workers = os.cpu_count() or 1
+    chunksize = max(1, len(sources) // (max_workers * 4))
+
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        results = executor.map(
+            _analyze_sample_metrics,
+            sources,
+            chunksize=chunksize,
+        )
+
+        for loc, complexity, tokens, preproc_count, warning in tqdm(
+            results,
+            total=len(sources),
+            desc=f"Analyzing Structural Metrics for {label}",
+        ):
+            if warning is not None:
+                print(
+                    f"Warning: Failed to analyze function for Structural Metrics: {warning}"
+                )
+                continue
+
+            if loc is not None:
+                loc_values.append(loc)
+
+            if complexity is not None:
+                cyclomatic_complexity_values.append(complexity)
+
+            if tokens is not None:
+                token_counts.append(tokens)
+
+            cnt_preprocessor_directives += preproc_count
+
+    return (
+        loc_values,
+        cyclomatic_complexity_values,
+        token_counts,
+        cnt_preprocessor_directives,
+    )
+
+
+
 def analyze_structural_metrics(config: config, dataset: Dataset) -> StructuralMetricsResults:
     print("Analyzing structural metrics...")
 
@@ -128,11 +231,11 @@ def analyze_structural_metrics(config: config, dataset: Dataset) -> StructuralMe
         count_tokens = config.analysis.structural_metrics.tokens
         count_structural = config.analysis.structural_metrics.loc or config.analysis.structural_metrics.cyclomatic_complexity
         if dataset.has_splits():
-            train_nlocs, train_cyclomatic_complexity, train_token_counts, train_cnt_preprocessor_directives = _get_metrics(
+            train_nlocs, train_cyclomatic_complexity, train_token_counts, train_cnt_preprocessor_directives = _get_metrics_mpu(
                 dataset.train or [], "Train", count_tokens=count_tokens, count_structural=count_structural)
-            test_nlocs, test_cyclomatic_complexity, test_token_counts, test_cnt_preprocessor_directives = _get_metrics(
+            test_nlocs, test_cyclomatic_complexity, test_token_counts, test_cnt_preprocessor_directives = _get_metrics_mpu(
                 dataset.test or [], "Test", count_tokens=count_tokens, count_structural=count_structural)
-            valid_nlocs, valid_cyclomatic_complexity, valid_token_counts, valid_cnt_preprocessor_directives = _get_metrics(
+            valid_nlocs, valid_cyclomatic_complexity, valid_token_counts, valid_cnt_preprocessor_directives = _get_metrics_mpu(
                 dataset.validation or [], "Validation", count_tokens=count_tokens, count_structural=count_structural)
             overall_nlocs, overall_cyclomatic_complexity, overall_token_counts = [*train_nlocs, *test_nlocs, *valid_nlocs], [
                 *train_cyclomatic_complexity, *test_cyclomatic_complexity, *valid_cyclomatic_complexity], [*train_token_counts, *test_token_counts, *valid_token_counts]
@@ -274,7 +377,7 @@ def analyze_structural_metrics(config: config, dataset: Dataset) -> StructuralMe
             )
 
         else:
-            nloc_overall, cyclomatic_complexity_overall, token_overall, cnt_preprocessor_directives = _get_metrics(
+            nloc_overall, cyclomatic_complexity_overall, token_overall, cnt_preprocessor_directives = _get_metrics_mpu(
                 dataset.data, "Overall")
             nloc_overall_results = CountingResult(
                 mean=sum(nloc_overall) /

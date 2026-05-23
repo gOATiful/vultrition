@@ -1,11 +1,11 @@
 import itertools
 from typing import Tuple
 
-from vultrition.analysis.clustering_analysis import compute_embedding_cluster_diversity, print_cluster_diversity_summary
+
+from vultrition.analysis.clustering_minibatchkmeans import sweep_minibatch_k_until_entropy_stable
 from vultrition.analysis.cross_contamination_analysis import embedding_dataset_similarity
-from vultrition.analysis.similarity_analysis import create_code_embeddings
+from vultrition.analysis.embeddings import create_code_embeddings
 from vultrition.models import config
-from vultrition.models import results
 from vultrition.models.dataset import Dataset, Sample
 from vultrition.models.results import CrossContaminationResults, DiversityResults, QualityMetricsResults, SplitNumbericalMetricsResults, StructuralMetricsResults, CompletenessResults, TimeSpanResults
 
@@ -87,13 +87,33 @@ def _eval_uniqueness(dataset_embeddings: dict) -> dict:
     scores = {"train": -1, "test": -1, "validation": -1, "overall": -1}
     for split_name, embeddings in dataset_embeddings.items():
         print(f"Computing uniqueness for split: {split_name}")
-        r = compute_embedding_cluster_diversity(
+        sweep = sweep_minibatch_k_until_entropy_stable(
             embeddings,
-            min_cluster_size=10,
-            min_samples=1,
+            start_k=512,
+            max_k=16384,
+            growth_factor=2.0,
+            min_entropy_delta_ratio=0.005,
+            patience=2,
+            batch_size=None,
+            random_state=42,
+            normalize_embeddings=False, # embeddings are already normalized
+            max_iter=300,
+            n_init=5,
+            show_progress=True,
         )
-        print_cluster_diversity_summary(r)
-        scores[split_name] = r.diversity.diversity_score
+        
+        best = sweep.final_result
+        
+        print("Final k:", sweep.final_k)
+        print("Stopped due to stability:", sweep.stopped_due_to_stability)
+        print("Entropy:", best.entropy)
+        print("Effective groups:", best.effective_num_groups)
+        print("Resolution-adjusted uniqueness:", best.resolution_adjusted_uniqueness)
+        print("Balance score:", best.balance_score)
+        print("Largest group ratio:", best.largest_group_ratio)
+        uniqueness_score = best.uniqueness_score
+        
+        scores[split_name] = uniqueness_score
 
     return scores
 
@@ -134,19 +154,33 @@ def _eval_uniqueness(dataset_embeddings: dict) -> dict:
     # return scores
 
 
-def _eval_cross_contamination(split_embeddings: dict) -> dict:
+def _eval_cross_contamination(split_embeddings: dict, split_ids: dict) -> dict:
     splits = ["train", "test", "validation"]
     combos = list(itertools.combinations(splits, 2))
     cross_splits = [f"{s1}_{s2}" for s1, s2 in combos]
-    scores = {k: 0.0 for k in cross_splits}
+    scores = {k: -1 for k in cross_splits}
     for s1, s2 in combos:
         A = split_embeddings.get(s1, [])
+        A_ids = split_ids.get(s1, [])
         B = split_embeddings.get(s2, [])
+        B_ids = split_ids.get(s2, [])
         if len(A) == 0 or len(B) == 0:
             print(f"Skipping cross-contamination analysis for {s1} and {s2} due to empty embeddings.")
             continue
-        summary = embedding_dataset_similarity(A, B)
-        scores[f"{s1}_{s2}"] = summary["symmetric_similarity_score"]
+        
+        r = embedding_dataset_similarity(
+            A=A,
+            B=B,
+            ids_A=A_ids,
+            ids_B=B_ids,
+            top_k=1,
+            chunk_size=256,
+            show_progress=True,
+            return_matches=False,
+        )
+        
+        summary = r.summary
+        scores[f"{s1}_{s2}"] = summary.symmetric_similarity_score
 
     return scores
 
@@ -249,21 +283,32 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
     if config.analysis.quality_metrics.cross_contamination or config.analysis.quality_metrics.uniqueness:
         print("Creating code embeddings for uniqueness and cross-contamination analysis...")
         dataset_embeddings = {}
+        dataset_ids = {}
         if dataset.has_splits():
             print("Creating code embeddings for train split...")
-            dataset_embeddings["train"] = create_code_embeddings(
+            train_embeddings_result = create_code_embeddings(
                 dataset.train or [])
+            dataset_embeddings["train"] = train_embeddings_result.embeddings
+            dataset_ids["train"] = train_embeddings_result.ids
             print("Creating code embeddings for test split...")
-            dataset_embeddings["test"] = create_code_embeddings(
+            test_embeddings_result = create_code_embeddings(
                 dataset.test or [])
+            dataset_embeddings["test"] = test_embeddings_result.embeddings
+            dataset_ids["test"] = test_embeddings_result.ids
             print("Creating code embeddings for validation split...")
-            dataset_embeddings["validation"] = create_code_embeddings(
+            valid_embeddings_result = create_code_embeddings(
                 dataset.validation or [])
+            dataset_embeddings["validation"] = valid_embeddings_result.embeddings
+            dataset_ids["validation"] = valid_embeddings_result.ids
+           
         print("Creating code embeddings for overall dataset...")
-        dataset_embeddings["overall"] = create_code_embeddings(dataset.data if not dataset.has_splits() else [
+        overall_embeddings_result = create_code_embeddings(dataset.data if not dataset.has_splits() else [
                                                                *dataset.train, 
                                                                *dataset.test, 
                                                                *dataset.validation])
+        dataset_embeddings["overall"] = overall_embeddings_result.embeddings
+        dataset_ids["overall"] = overall_embeddings_result.ids
+ 
 
         if config.analysis.quality_metrics.uniqueness:
             print("Evaluating uniqueness metrics...")
@@ -271,7 +316,7 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
             print(f"uniqueness: {uniqueness}")
         if config.analysis.quality_metrics.cross_contamination:
             print("Evaluating cross-contamination...")
-            cross_contamination = _eval_cross_contamination(dataset_embeddings)
+            cross_contamination = _eval_cross_contamination(dataset_embeddings, dataset_ids)
             print(f"cross_contamination: {cross_contamination}")
 
         uniqueness_results = SplitNumbericalMetricsResults(

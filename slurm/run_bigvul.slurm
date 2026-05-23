@@ -1,12 +1,14 @@
 #!/bin/bash -l
 #SBATCH --ntasks 1
-#SBATCH --cpus-per-task 8
-#SBATCH --gres gpu:1
+#SBATCH --cpus-per-task 32
 #SBATCH --mem-per-cpu 8000
-#SBATCH --time 5:00:00
+#SBATCH --gres gpu:1
+#SBATCH --time 72:00:00
 
-#SBATCH -o %j/log.out
-#SBATCH -e %j/log.err
+#SBATCH --job-name=bigvul
+
+#SBATCH -o %j_%x/log.out
+#SBATCH -e %j_%x/log.err
 #SBATCH --mail-user torge.hinrichs@tuhh.de
 #SBATCH --mail-type ALL
 
@@ -18,7 +20,7 @@ module load cuda/12.8
 dataset="bigvul"
 variant=""
 
-PYTHON=python3.11
+PYTHON=python3.12
 
 TUHHID=cil9493
 
@@ -48,7 +50,7 @@ source env/bin/activate
 $PYTHON -m pip install --upgrade pip wheel setuptools
 
 $PYTHON -m pip install -e .
-vultrition -c examples/configs/${dataset}${variant}.toml --run_analysis -o vultrition_results_$dataset$variant.json
+vultrition -c examples/configs/${dataset}${variant}.toml --run_analysis -o vultrition_results_$dataset${variant}.json
 
 mkdir -p $INPUTDIR/new_results
 cp $WORKDIR/vultrition_results_*.json $INPUTDIR/new_results/

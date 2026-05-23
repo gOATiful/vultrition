@@ -5,7 +5,7 @@
 #SBATCH --gres gpu:1
 #SBATCH --time 72:00:00
 
-#SBATCH --job-name=primevul_full
+#SBATCH --job-name=reposvul_split
 
 #SBATCH -o %j_%x/log.out
 #SBATCH -e %j_%x/log.err
@@ -17,8 +17,8 @@
 module purge
 module load cuda/12.8
 
-dataset="primevul"
-variant="_full"
+dataset="reposvul"
+variant="_split"
 
 
 PYTHON=python3.12

@@ -17,11 +17,11 @@
 module purge
 module load cuda/12.8
 
-dataset="megavul_java"
-variant=""
+dataset="megavul"
+variant="_java"
 
 
-PYTHON=python3.11
+PYTHON=python3.12
 
 TUHHID=cil9493
 
@@ -49,6 +49,7 @@ $PYTHON -m pip cache dir
 $PYTHON -m venv env
 source env/bin/activate
 $PYTHON -m pip install --upgrade pip wheel setuptools
+
 
 $PYTHON -m pip install -e .
 vultrition -c examples/configs/${dataset}${variant}.toml --run_analysis -o vultrition_results_$dataset$variant.json

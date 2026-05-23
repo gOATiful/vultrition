@@ -1,0 +1,15 @@
+sbatch slurm/run_bigvul.slurm
+sbatch slurm/run_cleanvul.slurm
+sbatch slurm/run_diversevul.slurm
+sbatch slurm/run_icvul.slurm
+sbatch slurm/run_megavul_cpp.slurm
+sbatch slurm/run_megavul_java.slurm
+sbatch slurm/run_primevul_full.slurm
+sbatch slurm/run_primevul_paired.slurm
+sbatch slurm/run_reposvul_c.slurm
+sbatch slurm/run_reposvul_cpp.slurm
+sbatch slurm/run_reposvul_java.slurm
+sbatch slurm/run_reposvul_python.slurm
+sbatch slurm/run_reposvul_release.slurm
+sbatch slurm/run_secvuleval.slurm
+sbatch slurm/run_titanvul.slurm

@@ -21,7 +21,7 @@ dataset="cleanvul"
 variant=""
 
 
-PYTHON=python3.11
+PYTHON=python3.12
 
 TUHHID=cil9493
 
@@ -48,7 +48,7 @@ echo "Python environment"
 $PYTHON -m pip cache dir
 $PYTHON -m venv env
 source env/bin/activate
-$PYTHON -m pip install --upgrade pip wheel setuptools
+$PYTHON -m pip install -U pip setuptools wheel
 
 $PYTHON -m pip install -e .
 vultrition -c examples/configs/${dataset}${variant}.toml --run_analysis -o vultrition_results_$dataset$variant.json

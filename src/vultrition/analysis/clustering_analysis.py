@@ -1,55 +1,68 @@
 from __future__ import annotations
 
-from collections import Counter, defaultdict
+import math
+import warnings
+from collections import Counter
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-
-try:
-    from sklearn.cluster import HDBSCAN
-except ImportError as exc:
-    raise ImportError(
-        "HDBSCAN requires scikit-learn with HDBSCAN support. "
-        "Install or upgrade with: pip install -U scikit-learn"
-    ) from exc
+from sklearn.cluster import HDBSCAN
+from sklearn.decomposition import PCA
+from tqdm.auto import tqdm
 
 
 @dataclass
-class HDBSCANClusterResult:
-    labels: np.ndarray
-    probabilities: np.ndarray
-    clusters: dict[int, list[int]]
-    cluster_sizes: dict[int, int]
-    noise_indices: list[int]
-    num_samples: int
-    num_clusters: int
-    noise_count: int
-    noise_ratio: float
+class ClusteringSummary:
+    backend: str
 
+    num_samples_total: int
+    num_samples_clustered: int
+    embedding_dim_original: int
+    embedding_dim_used: int
 
-@dataclass
-class ClusterDiversity:
-    diversity_score: float
-    simpson_diversity: float
-    effective_num_groups: float
-    num_samples: int
+    sampled: bool
+    sample_size: int | None
+    random_state: int
+
+    pca_components: int | None
+    pca_explained_variance_ratio_sum: float | None
+
+    min_cluster_size: int
+    min_samples: int | None
+    metric: str
+
+    normalize_before_pca: bool
+    normalize_after_pca: bool
+    noise_as_singletons: bool
+
     num_hdbscan_clusters: int
     num_structural_groups: int
     noise_count: int
     noise_ratio: float
+
     largest_group_size: int
     largest_group_ratio: float
-    structural_group_sizes: dict[int, int]
+
+    uniqueness_score: float
+    simpson_diversity: float
+    effective_num_groups: float
+
+    top_cluster_sizes: list[dict[str, int]]
 
 
 @dataclass
-class EmbeddingClusterDiversityResult:
-    cluster_result: HDBSCANClusterResult
-    diversity: ClusterDiversity
+class ClusteringUniquenessResult:
+    summary: ClusteringSummary
+    labels: np.ndarray
+    probabilities: np.ndarray
+    sample_indices: np.ndarray
 
 
-def _validate_embeddings(embeddings: np.ndarray) -> np.ndarray:
+def validate_embeddings(
+    embeddings: np.ndarray,
+    check_finite: bool = True,
+) -> np.ndarray:
     embeddings = np.asarray(embeddings)
 
     if embeddings.ndim != 2:
@@ -59,339 +72,550 @@ def _validate_embeddings(embeddings: np.ndarray) -> np.ndarray:
         )
 
     if embeddings.shape[0] == 0:
-        raise ValueError("Cannot cluster empty embeddings")
+        raise ValueError("Cannot cluster an empty embedding matrix")
 
-    if not np.isfinite(embeddings).all():
+    if embeddings.shape[1] == 0:
+        raise ValueError("Embedding dimension cannot be zero")
+
+    if check_finite and not np.isfinite(embeddings).all():
         raise ValueError("Embeddings contain NaN or infinite values")
 
     return embeddings.astype(np.float32, copy=False)
 
 
-def _l2_normalize_embeddings(embeddings: np.ndarray) -> np.ndarray:
-    norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+def l2_normalize_numpy(X: np.ndarray) -> np.ndarray:
+    norms = np.linalg.norm(X, axis=1, keepdims=True)
     norms = np.maximum(norms, 1e-12)
-    return embeddings / norms
+    return X / norms
 
 
-def cluster_code_embeddings_hdbscan(
-    embeddings: np.ndarray,
-    min_cluster_size: int = 10,
-    min_samples: int | None = 1,
-    normalize_embeddings: bool = True,
-    metric: str = "euclidean",
-    n_jobs: int = -1,
-) -> HDBSCANClusterResult:
-    """
-    Cluster code embeddings using HDBSCAN.
+def choose_min_cluster_size(
+    num_samples: int,
+    min_cluster_size: int | None = None,
+    min_cluster_size_ratio: float = 0.0003,
+    lower_bound: int = 5,
+) -> int:
+    if min_cluster_size is not None:
+        value = min_cluster_size
+    else:
+        value = int(round(num_samples * min_cluster_size_ratio))
+        value = max(lower_bound, value)
 
-    Args:
-        embeddings:
-            Array with shape (num_samples, embedding_dim), e.g. (7578, 1536).
+    if value < 2:
+        raise ValueError("min_cluster_size must be >= 2")
 
-        min_cluster_size:
-            Minimum number of samples required for a group to be considered
-            a cluster.
-
-        min_samples:
-            Controls how conservative HDBSCAN is.
-
-            min_samples=1 is permissive and useful for diversity analysis.
-            Larger values produce fewer clusters and more noise.
-
-        normalize_embeddings:
-            If True, L2-normalizes embeddings before clustering.
-
-            This is recommended for embedding vectors because it makes
-            Euclidean distance behave similarly to cosine distance.
-
-        metric:
-            Distance metric for HDBSCAN. For normalized embeddings,
-            "euclidean" is a good default.
-
-        n_jobs:
-            Number of CPU jobs. -1 uses all available CPUs.
-
-    Returns:
-        HDBSCANClusterResult
-    """
-
-    embeddings = _validate_embeddings(embeddings)
-
-    if normalize_embeddings:
-        embeddings = _l2_normalize_embeddings(embeddings)
-
-    num_samples = embeddings.shape[0]
-
-    if min_cluster_size < 2:
-        raise ValueError("min_cluster_size must be >= 2 for meaningful clustering")
-
-    if num_samples < min_cluster_size:
+    if value > num_samples:
         raise ValueError(
-            f"Need at least min_cluster_size={min_cluster_size} samples, "
-            f"but got only {num_samples}"
+            f"min_cluster_size={value} is larger than num_samples={num_samples}"
         )
 
-    clusterer = HDBSCAN(
-        min_cluster_size=min_cluster_size,
-        min_samples=min_samples,
-        metric=metric,
-        n_jobs=n_jobs,
-    )
-
-    labels = clusterer.fit_predict(embeddings)
-
-    probabilities = getattr(clusterer, "probabilities_", None)
-    if probabilities is None:
-        probabilities = np.ones(num_samples, dtype=np.float32)
-    else:
-        probabilities = np.asarray(probabilities, dtype=np.float32)
-
-    clusters: dict[int, list[int]] = defaultdict(list)
-
-    for index, label in enumerate(labels):
-        clusters[int(label)].append(index)
-
-    cluster_sizes = dict(Counter(int(label) for label in labels))
-
-    noise_indices = clusters.get(-1, [])
-    noise_count = len(noise_indices)
-    noise_ratio = noise_count / num_samples
-
-    real_cluster_labels = [label for label in cluster_sizes if label != -1]
-
-    return HDBSCANClusterResult(
-        labels=np.asarray(labels, dtype=np.int64),
-        probabilities=probabilities,
-        clusters=dict(clusters),
-        cluster_sizes=cluster_sizes,
-        noise_indices=noise_indices,
-        num_samples=num_samples,
-        num_clusters=len(real_cluster_labels),
-        noise_count=noise_count,
-        noise_ratio=noise_ratio,
-    )
+    return value
 
 
-def compute_cluster_diversity_from_labels(
-    labels: np.ndarray,
-    noise_as_singletons: bool = True,
-) -> ClusterDiversity:
+def maybe_sample_embeddings(
+    embeddings: np.ndarray,
+    sample_size: int | None = None,
+    random_state: int = 42,
+) -> tuple[np.ndarray, np.ndarray]:
     """
-    Compute structural diversity from HDBSCAN labels.
+    Optionally sample embeddings before clustering.
 
-    Args:
-        labels:
-            HDBSCAN labels with shape (num_samples,).
-            Label -1 means noise / unclustered.
+    For large datasets like 330k samples, CPU HDBSCAN on the full dataset may be
+    impractical. Sampling gives an estimated uniqueness score.
+    """
 
-        noise_as_singletons:
-            If True, every HDBSCAN noise point is treated as its own
-            structural group.
+    num_samples = len(embeddings)
 
-            This is recommended for diversity analysis because HDBSCAN noise
-            points are structurally not part of any dense similarity group.
+    if sample_size is None or sample_size >= num_samples:
+        indices = np.arange(num_samples, dtype=np.int64)
+        return embeddings, indices
+
+    if sample_size < 2:
+        raise ValueError("sample_size must be >= 2")
+
+    rng = np.random.default_rng(random_state)
+    indices = rng.choice(num_samples, size=sample_size, replace=False)
+    indices = np.sort(indices)
+
+    return embeddings[indices], indices
+
+
+def prepare_embeddings_for_clustering(
+    embeddings: np.ndarray,
+    *,
+    pca_components: int | None = 100,
+    normalize_before_pca: bool = True,
+    normalize_after_pca: bool = True,
+    show_progress: bool = True,
+) -> tuple[np.ndarray, int, float | None]:
+    """
+    Normalize, optionally PCA-reduce, and normalize again.
 
     Returns:
-        ClusterDiversity
+        X:
+            Prepared embeddings.
 
-    Main metric:
-        diversity_score in [0, 1]
+        embedding_dim_used:
+            Final dimension used for HDBSCAN.
 
-        0.0 means all samples are in one structural group.
-        1.0 means every sample is structurally unique.
+        pca_explained_variance_ratio_sum:
+            Sum of PCA explained variance ratios, or None if PCA disabled.
     """
 
-    labels = np.asarray(labels)
+    progress = tqdm(
+        total=3 + int(pca_components is not None),
+        desc="Prepare embeddings",
+        unit="step",
+        disable=not show_progress,
+    )
+
+    try:
+        progress.set_postfix_str("copy to float32")
+        X = np.asarray(embeddings, dtype=np.float32)
+        progress.update(1)
+
+        progress.set_postfix_str("normalize before PCA")
+        if normalize_before_pca:
+            X = l2_normalize_numpy(X)
+        progress.update(1)
+
+        pca_explained = None
+
+        if pca_components is not None:
+            if pca_components >= X.shape[1]:
+                raise ValueError(
+                    f"pca_components={pca_components} must be smaller than "
+                    f"embedding_dim={X.shape[1]}"
+                )
+
+            progress.set_postfix_str(f"PCA to {pca_components} dims")
+
+            pca = PCA(
+                n_components=pca_components,
+                svd_solver="randomized",
+                random_state=42,
+            )
+
+            X = pca.fit_transform(X).astype(np.float32, copy=False)
+            pca_explained = float(np.sum(pca.explained_variance_ratio_))
+
+            progress.update(1)
+
+        progress.set_postfix_str("normalize after PCA")
+        if normalize_after_pca:
+            X = l2_normalize_numpy(X)
+        progress.update(1)
+
+        progress.set_postfix_str("done")
+        embedding_dim_used = int(X.shape[1])
+        progress.update(1)
+
+        return X, embedding_dim_used, pca_explained
+
+    finally:
+        progress.close()
+
+
+def run_hdbscan_cpu(
+    embeddings: np.ndarray,
+    *,
+    min_cluster_size: int,
+    min_samples: int | None = 1,
+    metric: str = "cosine", #"euclidean",
+    show_progress: bool = True,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Run CPU HDBSCAN using scikit-learn.
+
+    Returns:
+        labels:
+            HDBSCAN labels. Noise is -1.
+
+        probabilities:
+            HDBSCAN membership probabilities if available.
+    """
+
+    progress = tqdm(
+        total=2,
+        desc="CPU HDBSCAN",
+        unit="step",
+        disable=not show_progress,
+    )
+
+    try:
+        progress.set_postfix_str("fit HDBSCAN")
+
+        kwargs: dict[str, Any] = {
+            "min_cluster_size": min_cluster_size,
+            "metric": metric,
+            "n_jobs": -1,
+        }
+
+        if min_samples is not None:
+            kwargs["min_samples"] = min_samples
+
+        clusterer = HDBSCAN(**kwargs)
+        labels = clusterer.fit_predict(embeddings).astype(np.int64)
+
+        progress.update(1)
+
+        progress.set_postfix_str("read probabilities")
+
+        probabilities = getattr(clusterer, "probabilities_", None)
+
+        if probabilities is None:
+            probabilities = np.ones(len(labels), dtype=np.float32)
+        else:
+            probabilities = np.asarray(probabilities, dtype=np.float32)
+
+        progress.update(1)
+
+        return labels, probabilities
+
+    finally:
+        progress.close()
+
+
+def compute_uniqueness_from_labels(
+    labels: np.ndarray,
+    *,
+    backend: str,
+    num_samples_total: int,
+    num_samples_clustered: int,
+    embedding_dim_original: int,
+    embedding_dim_used: int,
+    sampled: bool,
+    sample_size: int | None,
+    random_state: int,
+    pca_components: int | None,
+    pca_explained_variance_ratio_sum: float | None,
+    min_cluster_size: int,
+    min_samples: int | None,
+    metric: str,
+    normalize_before_pca: bool,
+    normalize_after_pca: bool,
+    noise_as_singletons: bool = True,
+) -> ClusteringSummary:
+    """
+    Compute uniqueness from HDBSCAN labels.
+
+    HDBSCAN uses label -1 for noise.
+
+    If noise_as_singletons=True, every noise point is treated as its own
+    structural group. This makes the score measure uniqueness/non-redundancy.
+    """
+
+    labels = np.asarray(labels, dtype=np.int64)
 
     if labels.ndim != 1:
+        raise ValueError(f"Expected labels with shape (num_samples,), got {labels.shape}")
+
+    if len(labels) != num_samples_clustered:
         raise ValueError(
-            f"Expected labels with shape (num_samples,), got {labels.shape}"
+            f"Expected {num_samples_clustered} labels, got {len(labels)}"
         )
 
-    num_samples = len(labels)
+    label_counts = Counter(int(label) for label in labels)
 
-    if num_samples == 0:
-        raise ValueError("Cannot compute diversity for zero labels")
+    noise_count = int(label_counts.get(-1, 0))
 
-    structural_labels: list[int] = []
-    next_noise_label = -2
+    real_cluster_counts = {
+        label: count
+        for label, count in label_counts.items()
+        if label != -1
+    }
 
-    for label in labels:
-        label = int(label)
-
-        if label == -1 and noise_as_singletons:
-            structural_labels.append(next_noise_label)
-            next_noise_label -= 1
-        else:
-            structural_labels.append(label)
-
-    group_sizes = dict(Counter(structural_labels))
-    sizes = np.array(list(group_sizes.values()), dtype=np.float64)
-    probabilities = sizes / num_samples
-
-    entropy = -np.sum(probabilities * np.log(probabilities))
-
-    if num_samples > 1:
-        max_entropy = np.log(num_samples)
-        diversity_score = float(entropy / max_entropy)
+    if noise_as_singletons:
+        structural_sizes = list(real_cluster_counts.values()) + [1] * noise_count
     else:
-        diversity_score = 0.0
+        structural_sizes = list(real_cluster_counts.values())
+        if noise_count > 0:
+            structural_sizes.append(noise_count)
 
-    simpson = 1.0 - float(np.sum(probabilities**2))
+    if not structural_sizes:
+        structural_sizes = [num_samples_clustered]
 
-    if num_samples > 1:
-        max_simpson = 1.0 - 1.0 / num_samples
-        simpson_diversity = float(simpson / max_simpson)
+    sizes = np.asarray(structural_sizes, dtype=np.float64)
+    probabilities = sizes / float(num_samples_clustered)
+
+    entropy = -float(np.sum(probabilities * np.log(probabilities)))
+
+    if num_samples_clustered > 1:
+        uniqueness_score = entropy / math.log(num_samples_clustered)
+    else:
+        uniqueness_score = 0.0
+
+    simpson_raw = 1.0 - float(np.sum(probabilities**2))
+
+    if num_samples_clustered > 1:
+        simpson_max = 1.0 - 1.0 / num_samples_clustered
+        simpson_diversity = simpson_raw / simpson_max
     else:
         simpson_diversity = 0.0
 
-    effective_num_groups = float(np.exp(entropy))
+    effective_num_groups = float(math.exp(entropy))
 
-    noise_count = int(np.sum(labels == -1))
-    noise_ratio = noise_count / num_samples
+    num_hdbscan_clusters = len(real_cluster_counts)
 
-    hdbscan_cluster_labels = set(int(label) for label in labels if int(label) != -1)
+    if noise_as_singletons:
+        num_structural_groups = num_hdbscan_clusters + noise_count
+    else:
+        num_structural_groups = num_hdbscan_clusters + int(noise_count > 0)
 
     largest_group_size = int(np.max(sizes))
-    largest_group_ratio = largest_group_size / num_samples
+    largest_group_ratio = largest_group_size / float(num_samples_clustered)
+    noise_ratio = noise_count / float(num_samples_clustered)
 
-    return ClusterDiversity(
-        diversity_score=diversity_score,
-        simpson_diversity=simpson_diversity,
-        effective_num_groups=effective_num_groups,
-        num_samples=num_samples,
-        num_hdbscan_clusters=len(hdbscan_cluster_labels),
-        num_structural_groups=len(group_sizes),
+    top_cluster_sizes = [
+        {"label": int(label), "size": int(size)}
+        for label, size in sorted(
+            label_counts.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        )[:25]
+    ]
+
+    return ClusteringSummary(
+        backend=backend,
+        num_samples_total=num_samples_total,
+        num_samples_clustered=num_samples_clustered,
+        embedding_dim_original=embedding_dim_original,
+        embedding_dim_used=embedding_dim_used,
+        sampled=sampled,
+        sample_size=sample_size,
+        random_state=random_state,
+        pca_components=pca_components,
+        pca_explained_variance_ratio_sum=pca_explained_variance_ratio_sum,
+        min_cluster_size=min_cluster_size,
+        min_samples=min_samples,
+        metric=metric,
+        normalize_before_pca=normalize_before_pca,
+        normalize_after_pca=normalize_after_pca,
+        noise_as_singletons=noise_as_singletons,
+        num_hdbscan_clusters=num_hdbscan_clusters,
+        num_structural_groups=num_structural_groups,
         noise_count=noise_count,
         noise_ratio=noise_ratio,
         largest_group_size=largest_group_size,
         largest_group_ratio=largest_group_ratio,
-        structural_group_sizes={
-            int(group): int(size)
-            for group, size in sorted(group_sizes.items(), key=lambda x: x[0])
-        },
+        uniqueness_score=float(uniqueness_score),
+        simpson_diversity=float(simpson_diversity),
+        effective_num_groups=float(effective_num_groups),
+        top_cluster_sizes=top_cluster_sizes,
     )
 
 
-def compute_embedding_cluster_diversity(
+def compute_clustering_uniqueness(
     embeddings: np.ndarray,
-    min_cluster_size: int = 10,
+    *,
+    pca_components: int | None = 100,
+    min_cluster_size: int | None = None,
+    min_cluster_size_ratio: float = 0.0003,
+    min_cluster_size_lower_bound: int = 5,
     min_samples: int | None = 1,
-    normalize_embeddings: bool = True,
-    noise_as_singletons: bool = True,
     metric: str = "euclidean",
-    n_jobs: int = -1,
-) -> EmbeddingClusterDiversityResult:
+    normalize_before_pca: bool = True,
+    normalize_after_pca: bool = True,
+    noise_as_singletons: bool = True,
+    sample_size: int | None = None,
+    random_state: int = 42,
+    check_finite: bool = True,
+    show_progress: bool = True,
+) -> ClusteringUniquenessResult:
     """
-    Full pipeline:
-        embeddings -> HDBSCAN clusters -> diversity metrics
+    CPU-only clustering uniqueness pipeline.
+
+    Pipeline:
+        embeddings
+        -> optional sampling
+        -> normalization
+        -> optional PCA
+        -> CPU HDBSCAN
+        -> uniqueness score
 
     Args:
         embeddings:
             Array with shape (num_samples, embedding_dim).
 
+        pca_components:
+            PCA dimensions before clustering.
+            Use None to disable PCA.
+
         min_cluster_size:
-            Minimum cluster size for HDBSCAN.
+            Fixed HDBSCAN min_cluster_size.
+            If None, computed as:
+                max(min_cluster_size_lower_bound,
+                    round(num_clustered_samples * min_cluster_size_ratio))
 
         min_samples:
-            HDBSCAN conservativeness parameter.
+            HDBSCAN min_samples.
+            min_samples=1 is permissive and useful for uniqueness analysis.
 
-        normalize_embeddings:
-            Whether to L2-normalize embeddings before clustering.
+        sample_size:
+            Optional number of samples to cluster.
+            Recommended for very large datasets when running CPU-only.
 
         noise_as_singletons:
-            Whether each noise point should count as its own structural group
-            for diversity.
-
-        metric:
-            HDBSCAN distance metric.
-
-        n_jobs:
-            Number of CPU jobs. -1 uses all available CPUs.
+            If True, each HDBSCAN noise point counts as its own structural group.
 
     Returns:
-        EmbeddingClusterDiversityResult
+        ClusteringUniquenessResult:
+            summary:
+                Uniqueness metrics.
+
+            labels:
+                HDBSCAN labels for the clustered samples.
+
+            probabilities:
+                HDBSCAN probabilities for the clustered samples.
+
+            sample_indices:
+                Original row indices corresponding to labels.
     """
 
-    cluster_result = cluster_code_embeddings_hdbscan(
-        embeddings=embeddings,
-        min_cluster_size=min_cluster_size,
-        min_samples=min_samples,
-        normalize_embeddings=normalize_embeddings,
-        metric=metric,
-        n_jobs=n_jobs,
+    embeddings = validate_embeddings(embeddings, check_finite=check_finite)
+
+    num_samples_total, embedding_dim_original = embeddings.shape
+
+    sampled_embeddings, sample_indices = maybe_sample_embeddings(
+        embeddings,
+        sample_size=sample_size,
+        random_state=random_state,
     )
 
-    diversity = compute_cluster_diversity_from_labels(
-        labels=cluster_result.labels,
+    num_samples_clustered = len(sampled_embeddings)
+    sampled = num_samples_clustered != num_samples_total
+
+    if not sampled and num_samples_total > 50_000:
+        warnings.warn(
+            "CPU HDBSCAN on more than 50k samples can be very slow or impractical. "
+            "Consider setting sample_size=20000 or sample_size=50000.",
+            RuntimeWarning,
+        )
+
+    chosen_min_cluster_size = choose_min_cluster_size(
+        num_samples=num_samples_clustered,
+        min_cluster_size=min_cluster_size,
+        min_cluster_size_ratio=min_cluster_size_ratio,
+        lower_bound=min_cluster_size_lower_bound,
+    )
+
+    print(f"Embedding shape total:    {embeddings.shape}")
+    print(f"Clustered sample count:   {num_samples_clustered}")
+    print(f"Sampled:                  {sampled}")
+    print(f"Backend:                  cpu")
+    print(f"min_cluster_size:         {chosen_min_cluster_size}")
+    print(f"min_samples:              {min_samples}")
+    print(f"pca_components:           {pca_components}")
+
+    X, embedding_dim_used, pca_explained = prepare_embeddings_for_clustering(
+        sampled_embeddings,
+        pca_components=pca_components,
+        normalize_before_pca=normalize_before_pca,
+        normalize_after_pca=normalize_after_pca,
+        show_progress=show_progress,
+    )
+
+    labels, probabilities = run_hdbscan_cpu(
+        X,
+        min_cluster_size=chosen_min_cluster_size,
+        min_samples=min_samples,
+        metric=metric,
+        show_progress=show_progress,
+    )
+
+    summary = compute_uniqueness_from_labels(
+        labels=labels,
+        backend="cpu",
+        num_samples_total=num_samples_total,
+        num_samples_clustered=num_samples_clustered,
+        embedding_dim_original=embedding_dim_original,
+        embedding_dim_used=embedding_dim_used,
+        sampled=sampled,
+        sample_size=sample_size,
+        random_state=random_state,
+        pca_components=pca_components,
+        pca_explained_variance_ratio_sum=pca_explained,
+        min_cluster_size=chosen_min_cluster_size,
+        min_samples=min_samples,
+        metric=metric,
+        normalize_before_pca=normalize_before_pca,
+        normalize_after_pca=normalize_after_pca,
         noise_as_singletons=noise_as_singletons,
     )
 
-    return EmbeddingClusterDiversityResult(
-        cluster_result=cluster_result,
-        diversity=diversity,
+    return ClusteringUniquenessResult(
+        summary=summary,
+        labels=labels,
+        probabilities=probabilities,
+        sample_indices=sample_indices,
     )
 
 
-def cluster_diversity_to_dict(
-    result: EmbeddingClusterDiversityResult,
-) -> dict[str, Any]:
-    """
-    Convert result dataclasses into a JSON-serializable dictionary.
-    """
-
-    cluster_result = result.cluster_result
-    diversity = result.diversity
-
-    return {
-        "clustering": {
-            "num_samples": cluster_result.num_samples,
-            "num_clusters": cluster_result.num_clusters,
-            "noise_count": cluster_result.noise_count,
-            "noise_ratio": cluster_result.noise_ratio,
-            "cluster_sizes": {
-                str(label): size
-                for label, size in cluster_result.cluster_sizes.items()
-            },
-        },
-        "diversity": {
-            "diversity_score": diversity.diversity_score,
-            "simpson_diversity": diversity.simpson_diversity,
-            "effective_num_groups": diversity.effective_num_groups,
-            "num_samples": diversity.num_samples,
-            "num_hdbscan_clusters": diversity.num_hdbscan_clusters,
-            "num_structural_groups": diversity.num_structural_groups,
-            "noise_count": diversity.noise_count,
-            "noise_ratio": diversity.noise_ratio,
-            "largest_group_size": diversity.largest_group_size,
-            "largest_group_ratio": diversity.largest_group_ratio,
-            "structural_group_sizes": {
-                str(label): size
-                for label, size in diversity.structural_group_sizes.items()
-            },
-        },
-    }
-
-
-def print_cluster_diversity_summary(
-    result: EmbeddingClusterDiversityResult,
-) -> None:
-    """
-    Print a compact human-readable summary.
-    """
-
-    cluster_result = result.cluster_result
-    diversity = result.diversity
-
-    print("Cluster diversity summary")
+def print_clustering_summary(summary: ClusteringSummary) -> None:
+    print()
+    print("Cluster uniqueness summary")
     print("-" * 80)
-    print(f"Samples:                  {cluster_result.num_samples}")
-    print(f"HDBSCAN clusters:         {cluster_result.num_clusters}")
-    print(f"Structural groups:        {diversity.num_structural_groups}")
-    print(f"Noise samples:            {cluster_result.noise_count}")
-    print(f"Noise ratio:              {cluster_result.noise_ratio:.2%}")
-    print(f"Largest group size:       {diversity.largest_group_size}")
-    print(f"Largest group ratio:      {diversity.largest_group_ratio:.2%}")
-    print(f"Diversity score:          {diversity.diversity_score:.4f}")
-    print(f"Simpson diversity:        {diversity.simpson_diversity:.4f}")
-    print(f"Effective groups:         {diversity.effective_num_groups:.2f}")
+    print(f"Backend:                  {summary.backend}")
+    print(f"Samples total:            {summary.num_samples_total}")
+    print(f"Samples clustered:        {summary.num_samples_clustered}")
+    print(f"Sampled:                  {summary.sampled}")
+    print(f"Original dim:             {summary.embedding_dim_original}")
+    print(f"Used dim:                 {summary.embedding_dim_used}")
+    print(f"PCA components:           {summary.pca_components}")
+
+    if summary.pca_explained_variance_ratio_sum is not None:
+        print(
+            "PCA variance retained:    "
+            f"{summary.pca_explained_variance_ratio_sum:.4f}"
+        )
+
+    print(f"min_cluster_size:         {summary.min_cluster_size}")
+    print(f"min_samples:              {summary.min_samples}")
+    print(f"HDBSCAN clusters:         {summary.num_hdbscan_clusters}")
+    print(f"Structural groups:        {summary.num_structural_groups}")
+    print(f"Noise samples:            {summary.noise_count}")
+    print(f"Noise ratio:              {summary.noise_ratio:.2%}")
+    print(f"Largest group size:       {summary.largest_group_size}")
+    print(f"Largest group ratio:      {summary.largest_group_ratio:.2%}")
+    print(f"Uniqueness score:         {summary.uniqueness_score:.4f}")
+    print(f"Simpson diversity:        {summary.simpson_diversity:.4f}")
+    print(f"Effective groups:         {summary.effective_num_groups:.2f}")
+
+    print()
+    print("Top cluster sizes including noise label -1")
+    print("-" * 80)
+
+    for item in summary.top_cluster_sizes[:10]:
+        print(f"label={item['label']:<8} size={item['size']}")
+
+
+def clustering_summary_to_dict(summary: ClusteringSummary) -> dict[str, Any]:
+    return {
+        "backend": summary.backend,
+        "num_samples_total": summary.num_samples_total,
+        "num_samples_clustered": summary.num_samples_clustered,
+        "embedding_dim_original": summary.embedding_dim_original,
+        "embedding_dim_used": summary.embedding_dim_used,
+        "sampled": summary.sampled,
+        "sample_size": summary.sample_size,
+        "random_state": summary.random_state,
+        "pca_components": summary.pca_components,
+        "pca_explained_variance_ratio_sum": summary.pca_explained_variance_ratio_sum,
+        "min_cluster_size": summary.min_cluster_size,
+        "min_samples": summary.min_samples,
+        "metric": summary.metric,
+        "normalize_before_pca": summary.normalize_before_pca,
+        "normalize_after_pca": summary.normalize_after_pca,
+        "noise_as_singletons": summary.noise_as_singletons,
+        "num_hdbscan_clusters": summary.num_hdbscan_clusters,
+        "num_structural_groups": summary.num_structural_groups,
+        "noise_count": summary.noise_count,
+        "noise_ratio": summary.noise_ratio,
+        "largest_group_size": summary.largest_group_size,
+        "largest_group_ratio": summary.largest_group_ratio,
+        "uniqueness_score": summary.uniqueness_score,
+        "simpson_diversity": summary.simpson_diversity,
+        "effective_num_groups": summary.effective_num_groups,
+        "top_cluster_sizes": summary.top_cluster_sizes,
+    }

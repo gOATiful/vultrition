@@ -1,11 +1,11 @@
 #!/bin/bash -l
 #SBATCH --ntasks 1
-#SBATCH --cpus-per-task 32
-#SBATCH --mem-per-cpu 8000
+#SBATCH --cpus-per-task 8
 #SBATCH --gres gpu:1
-#SBATCH --time 72:00:00
+#SBATCH --mem-per-cpu 8000
+#SBATCH --time 5:00:00
 
-#SBATCH --job-name=primevul_full
+#SBATCH --job-name=secvuleval
 
 #SBATCH -o %j_%x/log.out
 #SBATCH -e %j_%x/log.err
@@ -17,8 +17,8 @@
 module purge
 module load cuda/12.8
 
-dataset="primevul"
-variant="_full"
+dataset="secvuleval"
+variant=""
 
 
 PYTHON=python3.12

@@ -1,9 +1,9 @@
 #!/bin/bash -l
 #SBATCH --ntasks 1
-#SBATCH --cpus-per-task 8
-#SBATCH --gres gpu:1
+#SBATCH --cpus-per-task 32
 #SBATCH --mem-per-cpu 8000
-#SBATCH --time 5:00:00
+#SBATCH --gres gpu:1
+#SBATCH --time 72:00:00
 
 #SBATCH --job-name=diversevul
 
@@ -21,7 +21,7 @@ dataset="diversevul"
 variant=""
 
 
-PYTHON=python3.11
+PYTHON=python3.12
 
 TUHHID=cil9493
 
@@ -49,6 +49,7 @@ $PYTHON -m pip cache dir
 $PYTHON -m venv env
 source env/bin/activate
 $PYTHON -m pip install --upgrade pip wheel setuptools
+
 
 $PYTHON -m pip install -e .
 vultrition -c examples/configs/${dataset}${variant}.toml --run_analysis -o vultrition_results_$dataset$variant.json
