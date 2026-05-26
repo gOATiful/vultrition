@@ -118,7 +118,7 @@ def create_code_embeddings(
     batch_size: int = 8,
     max_length: int = 8192,
     id_fn: Callable[[Sample, int], str] | None = None,
-    normalize: bool = True,
+    normalize: bool = False,
 ) -> CodeEmbeddingResult:
     """
     Create code embeddings and matching sample IDs.
@@ -164,7 +164,6 @@ def create_code_embeddings(
     print(f"CPU threads: {cpu_count}")
     print(f"Samples: {len(samples)}")
     print(f"Batch size: {batch_size}")
-    print(f"Normalize embeddings: {normalize}")
 
     print("Loading tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)

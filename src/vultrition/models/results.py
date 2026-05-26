@@ -2,17 +2,19 @@ from dataclasses import dataclass
 
 
 @dataclass
-class SplitNumbericalMetricsResults:
+class SplitNumericalMetricsResults:
     train: float
     test: float
     validation: float
     overall: float
+    
+    
 
 
 @dataclass
 class DiversityResults:
-    unique_cwes: SplitNumbericalMetricsResults
-    unique_projects: SplitNumbericalMetricsResults
+    unique_cwes: SplitNumericalMetricsResults
+    unique_projects: SplitNumericalMetricsResults
 
 
 @dataclass
@@ -40,13 +42,16 @@ class CompletenessResults:
 
 @dataclass
 class QualityMetricsResults:
-    samples: SplitNumbericalMetricsResults
+    samples: SplitNumericalMetricsResults
     completeness: CompletenessResults
     diversity: DiversityResults
     balance: float
     timespan: TimeSpanResults
-    uniqueness: SplitNumbericalMetricsResults
+    similarity: SplitNumericalMetricsResults
+    similar_functions: SplitNumericalMetricsResults
     cross_contamination: CrossContaminationResults
+    cross_contamination_a_b_above_threshold: CrossContaminationResults
+    cross_contamination_b_a_above_threshold: CrossContaminationResults
 
 
 @dataclass
@@ -70,7 +75,7 @@ class StructuralMetricsResults:
     loc: SplitStatisticalMetricsResults
     tokens: SplitStatisticalMetricsResults
     cyclomatic_complexity: SplitStatisticalMetricsResults
-    preprocessor_directives: SplitNumbericalMetricsResults
+    preprocessor_directives: SplitNumericalMetricsResults
 
 
 @dataclass

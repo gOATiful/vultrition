@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task 8
-#SBATCH --gres gpu:1
+#SBATCH --gres gpu:a100:1
 #SBATCH --mem-per-cpu 8000
 #SBATCH --time 5:00:00
 
@@ -56,6 +56,8 @@ vultrition -c examples/configs/${dataset}${variant}.toml --run_analysis -o vultr
 
 mkdir -p $INPUTDIR/new_results
 cp $WORKDIR/vultrition_results_*.json $INPUTDIR/new_results/
+cp $WORKDIR/function_similarity_edges.csv $INPUTDIR/new_results/function_similarity_edges_$dataset${variant}.csv
+
 
 rm -rf $WORKDIR
 

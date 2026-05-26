@@ -2,12 +2,12 @@ import itertools
 from typing import Tuple
 
 
-from vultrition.analysis.clustering_minibatchkmeans import sweep_minibatch_k_until_entropy_stable
-from vultrition.analysis.cross_contamination_analysis import embedding_dataset_similarity
+from vultrition.analysis.cross_dataset_similarity_faiss_gpu import embedding_dataset_similarity
 from vultrition.analysis.embeddings import create_code_embeddings
+from vultrition.analysis.similarity_faiss import assess_function_similarity_dataset
 from vultrition.models import config
 from vultrition.models.dataset import Dataset, Sample
-from vultrition.models.results import CrossContaminationResults, DiversityResults, QualityMetricsResults, SplitNumbericalMetricsResults, StructuralMetricsResults, CompletenessResults, TimeSpanResults
+from vultrition.models.results import CrossContaminationResults, DiversityResults, QualityMetricsResults, SplitNumericalMetricsResults, StructuralMetricsResults, CompletenessResults, TimeSpanResults
 
 
 REQUIRED_FIELDS = {
@@ -82,40 +82,37 @@ def _eval_timespan(samples: list[Sample]) -> Tuple[str, str]:
     return str(min(cve_years)) if cve_years else "-", str(max(cve_years)) if cve_years else "-"
 
 
-def _eval_uniqueness(dataset_embeddings: dict) -> dict:
+def _eval_uniqueness(function_ids: dict, dataset_embeddings: dict) -> dict:
 
     scores = {"train": -1, "test": -1, "validation": -1, "overall": -1}
+    scores_functions = {"train": -1, "test": -
+                        1, "validation": -1, "overall": -1}
     for split_name, embeddings in dataset_embeddings.items():
         print(f"Computing uniqueness for split: {split_name}")
-        sweep = sweep_minibatch_k_until_entropy_stable(
-            embeddings,
-            start_k=512,
-            max_k=16384,
-            growth_factor=2.0,
-            min_entropy_delta_ratio=0.005,
-            patience=2,
-            batch_size=None,
-            random_state=42,
-            normalize_embeddings=False, # embeddings are already normalized
-            max_iter=300,
-            n_init=5,
-            show_progress=True,
+        r = assess_function_similarity_dataset(
+            embeddings=embeddings,
+            ids=function_ids[split_name],
+            k=20,
+            use_gpu=False,
+            gpu_id=0,
+            batch_size=8192,
+            output_csv="function_similarity_edges.csv",
+            nearest_neighbor_threshold=0.95,
         )
-        
-        best = sweep.final_result
-        
-        print("Final k:", sweep.final_k)
-        print("Stopped due to stability:", sweep.stopped_due_to_stability)
-        print("Entropy:", best.entropy)
-        print("Effective groups:", best.effective_num_groups)
-        print("Resolution-adjusted uniqueness:", best.resolution_adjusted_uniqueness)
-        print("Balance score:", best.balance_score)
-        print("Largest group ratio:", best.largest_group_ratio)
-        uniqueness_score = best.uniqueness_score
-        
-        scores[split_name] = uniqueness_score
 
-    return scores
+        print(
+            "Average TOP-1 nearest-neighbor similarity:",
+            r["average_top1_nearest_neighbor_similarity"],
+        )
+
+        print(
+            "Percentage above threshold:",
+            r["nearest_neighbor_above_threshold_percentage"],
+        )
+        scores[split_name] = r["average_top1_nearest_neighbor_similarity"]
+        scores_functions[split_name] = r["nearest_neighbor_above_threshold_percentage"]
+
+    return scores, scores_functions
 
     # scores = {"train": -1, "test": -1, "validation": -1, "overall": -1}
 
@@ -159,30 +156,40 @@ def _eval_cross_contamination(split_embeddings: dict, split_ids: dict) -> dict:
     combos = list(itertools.combinations(splits, 2))
     cross_splits = [f"{s1}_{s2}" for s1, s2 in combos]
     scores = {k: -1 for k in cross_splits}
+    scores_a_b_above_threshold = {k: -1 for k in cross_splits}
+    scores_b_a_above_threshold = {k: -1 for k in cross_splits}
     for s1, s2 in combos:
         A = split_embeddings.get(s1, [])
         A_ids = split_ids.get(s1, [])
         B = split_embeddings.get(s2, [])
         B_ids = split_ids.get(s2, [])
         if len(A) == 0 or len(B) == 0:
-            print(f"Skipping cross-contamination analysis for {s1} and {s2} due to empty embeddings.")
+            print(
+                f"Skipping cross-contamination analysis for {s1} and {s2} due to empty embeddings.")
             continue
-        
         r = embedding_dataset_similarity(
             A=A,
             B=B,
             ids_A=A_ids,
             ids_B=B_ids,
-            top_k=1,
-            chunk_size=256,
+            top_k=5,
+            chunk_size=8192,
+            normalize_embeddings=True,
             show_progress=True,
-            return_matches=False,
+            return_matches=True,
+            return_topk=True,
+            use_gpu=False,
+            gpu_id=0,
+            gpu_float16=False,
         )
-        
-        summary = r.summary
-        scores[f"{s1}_{s2}"] = summary.symmetric_similarity_score
 
-    return scores
+        summary = r.summary
+
+        scores[f"{s1}_{s2}"] = summary.symmetric_similarity_score
+        scores_a_b_above_threshold[f"{s1}_{s2}"] = summary.fraction_A_to_B_above_095
+        scores_b_a_above_threshold[f"{s1}_{s2}"] = summary.fraction_B_to_A_above_095
+
+    return scores, scores_a_b_above_threshold, scores_b_a_above_threshold
 
 
 def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetricsResults:
@@ -273,7 +280,7 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
         "test_validation": -1,
     }
 
-    uniqueness = {
+    similarity_results = {
         "train": -1,
         "test": -1,
         "validation": -1,
@@ -300,37 +307,47 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
                 dataset.validation or [])
             dataset_embeddings["validation"] = valid_embeddings_result.embeddings
             dataset_ids["validation"] = valid_embeddings_result.ids
-           
+
         print("Creating code embeddings for overall dataset...")
-        overall_embeddings_result = create_code_embeddings(dataset.data if not dataset.has_splits() else [
-                                                               *dataset.train, 
-                                                               *dataset.test, 
-                                                               *dataset.validation])
+        overall_embeddings_result = create_code_embeddings(dataset.data[:100] if not dataset.has_splits() else [
+            *dataset.train,
+            *dataset.test,
+            *dataset.validation])
         dataset_embeddings["overall"] = overall_embeddings_result.embeddings
         dataset_ids["overall"] = overall_embeddings_result.ids
- 
 
         if config.analysis.quality_metrics.uniqueness:
             print("Evaluating uniqueness metrics...")
-            uniqueness = _eval_uniqueness(dataset_embeddings)
-            print(f"uniqueness: {uniqueness}")
+            similarity_results, similarity_functions = _eval_uniqueness(
+                dataset_ids, dataset_embeddings)
+            print(f"uniqueness: {similarity_results}")
         if config.analysis.quality_metrics.cross_contamination:
             print("Evaluating cross-contamination...")
-            cross_contamination = _eval_cross_contamination(dataset_embeddings, dataset_ids)
+            cross_contamination, a_b_results, b_a_results = _eval_cross_contamination(
+                dataset_embeddings, dataset_ids)
             print(f"cross_contamination: {cross_contamination}")
+            print(f"fraction_A_to_B_nearest_above_threshold: {a_b_results}")
+            print(f"fraction_B_to_A_nearest_above_threshold: {b_a_results}")
 
-        uniqueness_results = SplitNumbericalMetricsResults(
-            train=uniqueness["train"] or -1,
-            test=uniqueness["test"] or -1,
-            validation=uniqueness["validation"] or -1,
-            overall=uniqueness["overall"] or -1,
+        similarity = SplitNumericalMetricsResults(
+            train=similarity_results["train"] or -1,
+            test=similarity_results["test"] or -1,
+            validation=similarity_results["validation"] or -1,
+            overall=similarity_results["overall"] or -1,
+        )
+
+        similarity_functions_results = SplitNumericalMetricsResults(
+            train=similarity_functions["train"] or -1,
+            test=similarity_functions["test"] or -1,
+            validation=similarity_functions["validation"] or -1,
+            overall=similarity_functions["overall"] or -1,
         )
 
     overall_samples_cnt = len(dataset.train) + len(dataset.test) + len(
         dataset.validation) if dataset.has_splits() else len(dataset.data)
 
     return QualityMetricsResults(
-        samples=SplitNumbericalMetricsResults(
+        samples=SplitNumericalMetricsResults(
             train=len(dataset.train) if dataset.train else -1,
             test=len(dataset.test) if dataset.test else -1,
             validation=len(dataset.validation) if dataset.validation else -1,
@@ -338,30 +355,41 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
         ),
         completeness=completeness_results,
         diversity=DiversityResults(
-            unique_cwes=SplitNumbericalMetricsResults(
+            unique_cwes=SplitNumericalMetricsResults(
                 train=unique_cwes_train,
                 test=unique_cwes_test,
                 validation=unique_cwes_valid,
                 overall=unique_cwes_overall
             ),
-            unique_projects=SplitNumbericalMetricsResults(
+            unique_projects=SplitNumericalMetricsResults(
                 train=unique_projects_train,
                 test=unique_projects_test,
                 validation=unique_projects_valid,
                 overall=unique_projects_overall
             )
         ),
-        balance=SplitNumbericalMetricsResults(
+        balance=SplitNumericalMetricsResults(
             train=balance_train,
             test=balance_test,
             validation=balance_valid,
             overall=balance_overall
         ),
         timespan=timespan_results,
-        uniqueness=uniqueness_results,
+        similarity=similarity,
+        similar_functions=similarity_functions_results,
         cross_contamination=CrossContaminationResults(
-            train_test=cross_contamination["train_test"] or -1,
-            train_valid=cross_contamination["train_validation"] or -1,
-            test_valid=cross_contamination["test_validation"] or -1,
-        )
+            train_test=cross_contamination["train_test"],
+            train_valid=cross_contamination["train_validation"],
+            test_valid=cross_contamination["test_validation"],
+        ),
+        cross_contamination_a_b_above_threshold=CrossContaminationResults(
+            train_test=a_b_results["train_test"],
+            train_valid=a_b_results["train_validation"],
+            test_valid=a_b_results["test_validation"],
+        ),
+        cross_contamination_b_a_above_threshold=CrossContaminationResults(
+            train_test=b_a_results["train_test"],
+            train_valid=b_a_results["train_validation"],
+            test_valid=b_a_results["test_validation"],
+        ),
     )

@@ -27,8 +27,8 @@ dependencies = [
   "torch",
   "transformers",
   "scikit-learn",
-  "cuml-cu12",
-  "cupy-cuda12x"
+  "faiss-gpu-cu12",
+  "numpy",
 ]
 
 classifiers = [

@@ -9,7 +9,7 @@ from pygments.util import ClassNotFound
 
 from vultrition.models import config
 from vultrition.models.dataset import Dataset, Sample
-from vultrition.models.results import CountingResult, SplitNumbericalMetricsResults, SplitStatisticalMetricsResults, StructuralMetricsResults
+from vultrition.models.results import CountingResult, SplitNumericalMetricsResults, SplitStatisticalMetricsResults, StructuralMetricsResults
 
 
 LANGUAGE_TO_FILENAME = {
@@ -368,7 +368,7 @@ def analyze_structural_metrics(config: config, dataset: Dataset) -> StructuralMe
                     overall_token_counts) / len(overall_token_counts) if overall_token_counts else 0),
             )
 
-            preprocessor_directive_overall_results = SplitNumbericalMetricsResults(
+            preprocessor_directive_overall_results = SplitNumericalMetricsResults(
                 train=train_cnt_preprocessor_directives if dataset.has_splits() else -1,
                 test=test_cnt_preprocessor_directives if dataset.has_splits() else -1,
                 validation=valid_cnt_preprocessor_directives if dataset.has_splits() else -1,
@@ -405,7 +405,7 @@ def analyze_structural_metrics(config: config, dataset: Dataset) -> StructuralMe
                 std=_calc_std(token_overall, sum(token_overall) /
                               len(token_overall) if token_overall else 0),
             )
-            preprocessor_directive_overall_results = SplitNumbericalMetricsResults(
+            preprocessor_directive_overall_results = SplitNumericalMetricsResults(
                 train=-1,
                 test=-1,
                 validation=-1,
