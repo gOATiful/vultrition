@@ -51,6 +51,7 @@ def main() -> int:
             with open(args.output, "w") as f:
                 json.dump(asdict(results), f, indent=2)
             logging.info(f"Analysis results saved to {args.output}")
+            run_create_vultrition_label(args.output, args.svg_output)
         else:
             print(
                 "No analysis option specified. Use --run_analysis to run the full analysis pipeline.")

@@ -4,6 +4,7 @@ from vultrition.commands.run_structural_analysis import run_structural_analysis
 from vultrition.data_laoading.dataset_loader import load_dataset_from_config
 from vultrition.models import config
 from vultrition.models.dataset import Dataset
+from vultrition.models.results import AnalysisResults
 
 
 def print_samples(dataset: Dataset):
@@ -20,7 +21,7 @@ def print_samples(dataset: Dataset):
         print(f"  Project: {sample.project}")
 
 
-def run_full_analysis(config: config, verbose = False) -> None:
+def run_full_analysis(config: config, verbose = False) -> AnalysisResults:
 
     dataset = load_dataset_from_config(config)
     
@@ -29,10 +30,10 @@ def run_full_analysis(config: config, verbose = False) -> None:
     if verbose:
         print_samples(dataset)
 
-    meta_results = run_meta_analysis(config)
+    results = run_meta_analysis(config)
 
     quality_results = run_quality_analysis(config, dataset)
-    meta_results.quality_metrics = quality_results
+    results.quality_metrics = quality_results
     structural_results = run_structural_analysis(config, dataset)
-    meta_results.structural_metrics = structural_results
-    return meta_results
+    results.structural_metrics = structural_results
+    return results
