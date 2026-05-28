@@ -3,7 +3,7 @@
   "version": "67f5300",
   "description": "A Repository-Level High-Quality Vulnerability Dataset",
   "license": "",
-  "languages": "c",
+  "languages": "python",
   "has_runable_code_or_test_cases": false,
   "quality_metrics": {
     "samples": {
@@ -36,7 +36,7 @@
       "train": null,
       "test": null,
       "validation": null,
-      "overall": 0.0083611426895009
+      "overall": 0.00843164084168485
     },
     "timespan": {
       "train": null,
@@ -47,13 +47,41 @@
         "2023"
       ]
     },
-    "uniqueness": {
+    "similarity_top1": {
       "train": -1,
       "test": -1,
       "validation": -1,
-      "overall": 0.023401679932509262
+      "overall": 0.9953230023384094
+    },
+    "similar_functions_top1": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 98.09673988778466
+    },
+    "similarity_top3": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 0.8894086480140686
+    },
+    "similar_functions_top3": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 41.6186878873446
     },
     "cross_contamination": {
+      "train_test": -1,
+      "train_valid": -1,
+      "test_valid": -1
+    },
+    "cross_contamination_a_b_above_threshold": {
+      "train_test": -1,
+      "train_valid": -1,
+      "test_valid": -1
+    },
+    "cross_contamination_b_a_above_threshold": {
       "train_test": -1,
       "train_valid": -1,
       "test_valid": -1

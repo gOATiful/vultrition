@@ -2,8 +2,8 @@
 name="MegaVul"
 description = "The largest, high-quality, extensible, continuously updated, C/C++/Java function-level vulnerability dataset."
 version = "bde3e7c"
-license = "MIT"
-languages="cpp"
+license = "GPL-3.0"
+languages="java"
 has_runable_code_or_test_cases=false
 
 [dataset.files]

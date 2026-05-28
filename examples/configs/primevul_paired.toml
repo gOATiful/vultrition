@@ -1,5 +1,5 @@
 [dataset]
-name="PrimeVul"
+name="PrimeVul Paired"
 description = "PrimeVul is a new dataset for vulnerability detection, aiming to train and evaluate code language models in the realistic vulnerability detection settings."
 version = "v0.1"
 license = "MIT"

@@ -84,9 +84,30 @@ def _eval_timespan(samples: list[Sample]) -> Tuple[str, str]:
 
 def _eval_uniqueness(function_ids: dict, dataset_embeddings: dict) -> dict:
 
-    scores = {"train": -1, "test": -1, "validation": -1, "overall": -1}
-    scores_functions = {"train": -1, "test": -
-                        1, "validation": -1, "overall": -1}
+    scores = {
+        "train_top1": -1, 
+        "test_top1": -1, 
+        "validation_top1": -1, 
+        "overall_top1": -1,
+        "train_top3": -1, 
+        "test_top3": -1, 
+        "validation_top3": -1, 
+        "overall_top3": -1,
+        "train_top5": -1, 
+        "test_top5": -1, 
+        "validation_top5": -1, 
+        "overall_top5": -1
+        }
+    scores_functions = {
+        "train_top1": -1, 
+        "test_top1": -1, 
+        "validation_top1": -1, 
+        "overall_top1": -1,
+        "train_top3": -1, 
+        "test_top3": -1, 
+        "validation_top3": -1, 
+        "overall_top3": -1,
+        }
     for split_name, embeddings in dataset_embeddings.items():
         print(f"Computing uniqueness for split: {split_name}")
         r = assess_function_similarity_dataset(
@@ -99,18 +120,13 @@ def _eval_uniqueness(function_ids: dict, dataset_embeddings: dict) -> dict:
             output_csv="function_similarity_edges.csv",
             nearest_neighbor_threshold=0.95,
         )
+        scores[split_name+"_top1"] = r["average_top1_nearest_neighbor_similarity"]
+        scores_functions[split_name+"_top1"] = r["nearest_neighbor_above_threshold_percentage"]
+        scores[split_name+"_top3"] = r["average_top3_nearest_neighbor_similarity"]
+        scores_functions[split_name+"_top3"] = r["top3_average_above_threshold_percentage"]
 
-        print(
-            "Average TOP-1 nearest-neighbor similarity:",
-            r["average_top1_nearest_neighbor_similarity"],
-        )
-
-        print(
-            "Percentage above threshold:",
-            r["nearest_neighbor_above_threshold_percentage"],
-        )
-        scores[split_name] = r["average_top1_nearest_neighbor_similarity"]
-        scores_functions[split_name] = r["nearest_neighbor_above_threshold_percentage"]
+    print(f"similarity results: {scores}")
+    print(f"functions above threshold results: {scores}")
 
     return scores, scores_functions
 
@@ -309,7 +325,7 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
             dataset_ids["validation"] = valid_embeddings_result.ids
 
         print("Creating code embeddings for overall dataset...")
-        overall_embeddings_result = create_code_embeddings(dataset.data[:100] if not dataset.has_splits() else [
+        overall_embeddings_result = create_code_embeddings(dataset.data if not dataset.has_splits() else [
             *dataset.train,
             *dataset.test,
             *dataset.validation])
@@ -329,20 +345,34 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
             print(f"fraction_A_to_B_nearest_above_threshold: {a_b_results}")
             print(f"fraction_B_to_A_nearest_above_threshold: {b_a_results}")
 
-        similarity = SplitNumericalMetricsResults(
-            train=similarity_results["train"] or -1,
-            test=similarity_results["test"] or -1,
-            validation=similarity_results["validation"] or -1,
-            overall=similarity_results["overall"] or -1,
+        similarity_top1 = SplitNumericalMetricsResults(
+            train=similarity_results["train_top1"] or -1,
+            test=similarity_results["test_top1"] or -1,
+            validation=similarity_results["validation_top1"] or -1,
+            overall=similarity_results["overall_top1"] or -1,
         )
 
-        similarity_functions_results = SplitNumericalMetricsResults(
-            train=similarity_functions["train"] or -1,
-            test=similarity_functions["test"] or -1,
-            validation=similarity_functions["validation"] or -1,
-            overall=similarity_functions["overall"] or -1,
+        similarity_functions_results_top1 = SplitNumericalMetricsResults(
+            train=similarity_functions["train_top1"] or -1,
+            test=similarity_functions["test_top1"] or -1,
+            validation=similarity_functions["validation_top1"] or -1,
+            overall=similarity_functions["overall_top1"] or -1,
+        )
+        
+        similarity_top3 = SplitNumericalMetricsResults(
+            train=similarity_results["train_top3"] or -1,
+            test=similarity_results["test_top3"] or -1,
+            validation=similarity_results["validation_top3"] or -1,
+            overall=similarity_results["overall_top3"] or -1,
         )
 
+        similarity_functions_results_top3 = SplitNumericalMetricsResults(
+            train=similarity_functions["train_top3"] or -1,
+            test=similarity_functions["test_top3"] or -1,
+            validation=similarity_functions["validation_top3"] or -1,
+            overall=similarity_functions["overall_top3"] or -1,
+        )
+    
     overall_samples_cnt = len(dataset.train) + len(dataset.test) + len(
         dataset.validation) if dataset.has_splits() else len(dataset.data)
 
@@ -375,8 +405,10 @@ def analyze_quality_metrics(config: config, dataset: Dataset) -> StructuralMetri
             overall=balance_overall
         ),
         timespan=timespan_results,
-        similarity=similarity,
-        similar_functions=similarity_functions_results,
+        similarity_top1=similarity_top1,
+        similar_functions_top1=similarity_functions_results_top1,
+        similarity_top3=similarity_top3,
+        similar_functions_top3=similarity_functions_results_top3,
         cross_contamination=CrossContaminationResults(
             train_test=cross_contamination["train_test"],
             train_valid=cross_contamination["train_validation"],

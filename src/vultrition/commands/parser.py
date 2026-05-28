@@ -42,5 +42,8 @@ def get_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--run_analysis", action="store_true",
                         help="Run the full analysis pipeline (quality and structural).")
-
+    parser.add_argument("--create_vultrition_label", type=pathlib.Path,
+                        help="Create vulnerability dataset nutrition label from results file.")
+    parser.add_argument("--svg_output", type=pathlib.Path,
+                        help="Path to save the generated vulnerability dataset nutrition label SVG file.", default=pathlib.Path("vultrition_label.svg"))
     return parser

@@ -29,6 +29,7 @@ dependencies = [
   "scikit-learn",
   "faiss-gpu-cu12",
   "numpy",
+  "svgwrite",
 ]
 
 classifiers = [

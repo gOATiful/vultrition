@@ -5,6 +5,7 @@ import logging
 import sys
 
 
+from vultrition.commands.create_label import run_create_vultrition_label
 from vultrition.commands.load_config import load_config, print_config
 from vultrition.commands.create_config import create_config_template
 from vultrition.commands.parser import get_parser
@@ -24,7 +25,14 @@ def main() -> int:
             return 1
         print(f"Created config template at {created_path}")
         return 0
-
+    if args.create_vultrition_label and args.svg_output:
+        print("Creating vulnerability dataset nutrition label from results file...")
+        return run_create_vultrition_label(args.create_vultrition_label, args.svg_output)
+    if args.create_vultrition_label:
+        print("Creating vulnerability dataset nutrition label from results file...")
+        return run_create_vultrition_label(args.create_vultrition_label)
+        
+        
     if args.config:
         if not args.output:
             print("Error: --output is required when using --config", file=sys.stderr)

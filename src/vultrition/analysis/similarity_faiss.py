@@ -7,6 +7,56 @@ from typing import Optional, Sequence, Union, Dict, Any, Tuple
 import numpy as np
 
 
+def _top_n_average_metrics(
+    similarity_scores: np.ndarray,
+    n: int,
+    threshold: float,
+) -> Dict[str, float]:
+    """
+    Computes:
+    - per-function average of top-n similarities
+    - dataset average of those per-function top-n averages
+    - ratio/percentage of functions whose top-n average is >= threshold
+    """
+
+    if similarity_scores.shape[1] < n:
+        return {
+            f"average_top{n}_nearest_neighbor_similarity": float("nan"),
+            f"top{n}_average_above_threshold_ratio": float("nan"),
+            f"top{n}_average_above_threshold_percentage": float("nan"),
+        }
+
+    top_n_scores = similarity_scores[:, :n]
+    top_n_average_scores = np.nanmean(top_n_scores, axis=1)
+
+    valid_mask = np.isfinite(top_n_average_scores)
+
+    if not np.any(valid_mask):
+        return {
+            f"average_top{n}_nearest_neighbor_similarity": float("nan"),
+            f"top{n}_average_above_threshold_ratio": float("nan"),
+            f"top{n}_average_above_threshold_percentage": float("nan"),
+        }
+
+    valid_top_n_average_scores = top_n_average_scores[valid_mask]
+
+    average_top_n_similarity = float(np.mean(valid_top_n_average_scores))
+
+    top_n_above_threshold_ratio = float(
+        np.mean(valid_top_n_average_scores >= threshold)
+    )
+
+    top_n_above_threshold_percentage = float(
+        100.0 * top_n_above_threshold_ratio
+    )
+
+    return {
+        f"average_top{n}_nearest_neighbor_similarity": average_top_n_similarity,
+        f"top{n}_average_above_threshold_ratio": top_n_above_threshold_ratio,
+        f"top{n}_average_above_threshold_percentage": top_n_above_threshold_percentage,
+    }
+
+
 def assess_function_similarity_dataset(
     embeddings: np.ndarray,
     ids: Optional[Sequence[Union[str, int]]] = None,
@@ -19,7 +69,7 @@ def assess_function_similarity_dataset(
     near_duplicate_threshold: float = 0.95,
     highly_similar_threshold: float = 0.90,
     nearest_neighbor_threshold: float = 0.95,
-) -> Dict[str, Any]:    
+) -> Dict[str, Any]:
     """
     Compute top-k cosine similarities between function embeddings and return
     dataset-level quality metrics.
@@ -84,7 +134,8 @@ def assess_function_similarity_dataset(
         raise TypeError("embeddings must be a NumPy array")
 
     if embeddings.ndim != 2:
-        raise ValueError("embeddings must have shape (num_functions, embedding_dim)")
+        raise ValueError(
+            "embeddings must have shape (num_functions, embedding_dim)")
 
     num_functions, dim = embeddings.shape
 
@@ -97,13 +148,15 @@ def assess_function_similarity_dataset(
     if k <= 0:
         raise ValueError("k must be greater than 0")
 
-    k = min(k, num_functions - 1)
+    # We need at least 5 neighbors to compute top-3 and top-5 metrics.
+    k = min(max(k, 3), num_functions - 1)
 
     vectors = np.ascontiguousarray(embeddings.astype(np.float32, copy=True))
 
     norms = np.linalg.norm(vectors, axis=1)
     if np.any(norms == 0):
-        raise ValueError("Cosine similarity cannot be computed for zero-vector embeddings")
+        raise ValueError(
+            "Cosine similarity cannot be computed for zero-vector embeddings")
 
     # Normalize vectors so inner product == cosine similarity.
     faiss.normalize_L2(vectors)
@@ -169,7 +222,8 @@ def assess_function_similarity_dataset(
                     if writer is not None:
                         src_id = ids[src_index] if ids is not None else src_index
                         dst_id = ids[dst_index] if ids is not None else dst_index
-                        writer.writerow([src_id, dst_id, float(score), kept + 1])
+                        writer.writerow(
+                            [src_id, dst_id, float(score), kept + 1])
 
                     kept += 1
 
@@ -197,12 +251,58 @@ def assess_function_similarity_dataset(
         100.0 * nearest_neighbor_above_threshold_ratio
     )
 
+    # New TOP-3 / TOP-5 metrics.
+    top3_metrics = _top_n_average_metrics(
+        similarity_scores=similarity_scores,
+        n=3,
+        threshold=nearest_neighbor_threshold,
+    )
+
+
     mean_top1 = average_top1_nearest_neighbor_similarity
     median_top1 = float(np.nanmedian(top1_scores))
 
     duplicate_ratio = float(np.mean(top1_scores >= duplicate_threshold))
-    near_duplicate_ratio = float(np.mean(top1_scores >= near_duplicate_threshold))
-    highly_similar_ratio = float(np.mean(top1_scores >= highly_similar_threshold))
+    near_duplicate_ratio = float(
+        np.mean(top1_scores >= near_duplicate_threshold))
+    highly_similar_ratio = float(
+        np.mean(top1_scores >= highly_similar_threshold))
+
+    top1_percentiles = {
+        "p01": float(np.percentile(top1_scores, 1)),
+        "p05": float(np.percentile(top1_scores, 5)),
+        "p10": float(np.percentile(top1_scores, 10)),
+        "p25": float(np.percentile(top1_scores, 25)),
+        "p50": float(np.percentile(top1_scores, 50)),
+        "p75": float(np.percentile(top1_scores, 75)),
+        "p90": float(np.percentile(top1_scores, 90)),
+        "p95": float(np.percentile(top1_scores, 95)),
+        "p99": float(np.percentile(top1_scores, 99)),
+    }
+
+    # Score 1:
+    # Average TOP-1 nearest-neighbor similarity across all functions.
+    average_top1_nearest_neighbor_similarity = float(np.nanmean(top1_scores))
+
+    # Score 2:
+    # Percentage of functions whose nearest-neighbor similarity is above
+    # the configurable threshold. Default threshold: 0.95.
+    nearest_neighbor_above_threshold_ratio = float(
+        np.mean(top1_scores >= nearest_neighbor_threshold)
+    )
+
+    nearest_neighbor_above_threshold_percentage = float(
+        100.0 * nearest_neighbor_above_threshold_ratio
+    )
+
+    mean_top1 = average_top1_nearest_neighbor_similarity
+    median_top1 = float(np.nanmedian(top1_scores))
+
+    duplicate_ratio = float(np.mean(top1_scores >= duplicate_threshold))
+    near_duplicate_ratio = float(
+        np.mean(top1_scores >= near_duplicate_threshold))
+    highly_similar_ratio = float(
+        np.mean(top1_scores >= highly_similar_threshold))
 
     top1_percentiles = {
         "p01": float(np.percentile(top1_scores, 1)),
@@ -219,30 +319,34 @@ def assess_function_similarity_dataset(
     result = {
         "neighbor_indices": neighbor_indices,
         "similarity_scores": similarity_scores,
-    
-        # New requested scores
+
+        # Requested top-1 scores
         "average_top1_nearest_neighbor_similarity": average_top1_nearest_neighbor_similarity,
         "nearest_neighbor_threshold": nearest_neighbor_threshold,
         "nearest_neighbor_above_threshold_ratio": nearest_neighbor_above_threshold_ratio,
         "nearest_neighbor_above_threshold_percentage": nearest_neighbor_above_threshold_percentage,
-    
+
+        # New top-3 scores
+        **top3_metrics,
+
         # Existing metrics
         "mean_top1_similarity": mean_top1,
         "median_top1_similarity": median_top1,
-    
+
         "duplicate_ratio": duplicate_ratio,
         "near_duplicate_ratio": near_duplicate_ratio,
         "highly_similar_ratio": highly_similar_ratio,
-    
+
         "duplicate_threshold": duplicate_threshold,
         "near_duplicate_threshold": near_duplicate_threshold,
         "highly_similar_threshold": highly_similar_threshold,
-    
+
         "top1_percentiles": top1_percentiles,
-    
+
         "num_functions": num_functions,
         "embedding_dim": dim,
         "k": k,
         "used_gpu": use_gpu,
     }
+
     return result

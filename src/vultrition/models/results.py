@@ -45,10 +45,12 @@ class QualityMetricsResults:
     samples: SplitNumericalMetricsResults
     completeness: CompletenessResults
     diversity: DiversityResults
-    balance: float
+    balance: SplitNumericalMetricsResults
     timespan: TimeSpanResults
-    similarity: SplitNumericalMetricsResults
-    similar_functions: SplitNumericalMetricsResults
+    similarity_top1: SplitNumericalMetricsResults
+    similar_functions_top1: SplitNumericalMetricsResults
+    similarity_top3: SplitNumericalMetricsResults
+    similar_functions_top3: SplitNumericalMetricsResults
     cross_contamination: CrossContaminationResults
     cross_contamination_a_b_above_threshold: CrossContaminationResults
     cross_contamination_b_a_above_threshold: CrossContaminationResults

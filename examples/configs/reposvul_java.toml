@@ -3,7 +3,7 @@ name="ReposVul Java"
 description = "A Repository-Level High-Quality Vulnerability Dataset"
 version = "67f5300"
 license = ""
-languages="c"
+languages="java"
 has_runable_code_or_test_cases=false
 
 [dataset.files]
