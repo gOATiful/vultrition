@@ -1,0 +1,33 @@
+[dataset]
+name="PrimeVul Paired"
+description = "PrimeVul is a new dataset for vulnerability detection, aiming to train and evaluate code language models in the realistic vulnerability detection settings."
+version = "v0.1"
+license = "MIT"
+languages="cpp"
+has_runable_code_or_test_cases=false
+
+[dataset.files]
+train="datasets/primevul/primevul_train_paired.jsonl"
+test="datasets/primevul/primevul_test_paired.jsonl"
+valid="datasets/primevul/primevul_valid_paired.jsonl"
+
+[dataset.fields]
+function="func"
+label="target"
+vuln_label_value=1
+cve="cve"
+cwe="cwe"
+project="project_url"
+
+[dataset.analysis.quiality_metrics]
+completeness=true
+diversity=true
+balance=true
+timespan=true
+uniqueness=true
+cross_contamination=true
+
+[dataset.analysis.structural_metrics]
+loc=true
+tokens=true
+cyclomatic_complexity=true

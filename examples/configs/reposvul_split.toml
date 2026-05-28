@@ -1,0 +1,34 @@
+[dataset]
+name="ReposVul"
+description = "A Repository-Level High-Quality Vulnerability Dataset"
+version = "3dc5504"
+license = ""
+languages="cpp"
+has_runable_code_or_test_cases=false
+
+[dataset.files]
+train="datasets/reposvul/train_c_cpp_repository2.jsonl"
+test="datasets/reposvul/test_c_cpp_repository2.jsonl"
+valid="datasets/reposvul/valid_c_cpp_repository2.jsonl"
+
+
+[dataset.fields]
+function="function"
+label="label"
+vuln_label_value=1
+cve="cve"
+cwe="cwe"
+project="project"
+
+[dataset.analysis.quiality_metrics]
+completeness=true
+diversity=true
+balance=true
+timespan=true
+uniqueness=true
+cross_contamination=true
+
+[dataset.analysis.structural_metrics]
+loc=true
+tokens=true
+cyclomatic_complexity=true

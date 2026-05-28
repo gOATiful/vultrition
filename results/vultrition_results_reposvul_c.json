@@ -1,0 +1,131 @@
+{
+  "name": "ReposVul C",
+  "version": "67f5300",
+  "description": "A Repository-Level High-Quality Vulnerability Dataset",
+  "license": "",
+  "languages": "c",
+  "has_runable_code_or_test_cases": false,
+  "quality_metrics": {
+    "samples": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 181694
+    },
+    "completeness": {
+      "train": null,
+      "test": null,
+      "valid": null,
+      "overall": 1.0
+    },
+    "diversity": {
+      "unique_cwes": {
+        "train": null,
+        "test": null,
+        "validation": null,
+        "overall": 126
+      },
+      "unique_projects": {
+        "train": null,
+        "test": null,
+        "validation": null,
+        "overall": 325
+      }
+    },
+    "balance": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": 0.007038974859220503
+    },
+    "timespan": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": [
+        "2006",
+        "2023"
+      ]
+    },
+    "similarity_top1": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 0.9993247389793396
+    },
+    "similar_functions_top1": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 99.64996092331062
+    },
+    "similarity_top3": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 0.9437211155891418
+    },
+    "similar_functions_top3": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 57.52694090063514
+    },
+    "cross_contamination": {
+      "train_test": -1,
+      "train_valid": -1,
+      "test_valid": -1
+    },
+    "cross_contamination_a_b_above_threshold": {
+      "train_test": -1,
+      "train_valid": -1,
+      "test_valid": -1
+    },
+    "cross_contamination_b_a_above_threshold": {
+      "train_test": -1,
+      "train_valid": -1,
+      "test_valid": -1
+    }
+  },
+  "structural_metrics": {
+    "loc": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 1,
+        "max": 6312,
+        "mean": 30.892357712788016,
+        "std": 77.52087353505492
+      }
+    },
+    "tokens": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 3,
+        "max": 65102,
+        "mean": 332.2391713540348,
+        "std": 933.1969448543587
+      }
+    },
+    "cyclomatic_complexity": {
+      "train": null,
+      "test": null,
+      "validation": null,
+      "overall": {
+        "min": 1,
+        "max": 1192,
+        "mean": 5.9967252122603245,
+        "std": 12.456646055527825
+      }
+    },
+    "preprocessor_directives": {
+      "train": -1,
+      "test": -1,
+      "validation": -1,
+      "overall": 14426
+    }
+  }
+}

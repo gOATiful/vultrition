@@ -1,0 +1,31 @@
+[dataset]
+name="DiverseVul"
+description = "A New Vulnerable Source Code Dataset for Deep Learning Based Vulnerability Detection"
+version = "2023-07-02"
+license = "NA"
+languages="cpp"
+has_runable_code_or_test_cases=false
+
+[dataset.files]
+data="datasets/diversevul/diversevul.jsonl"
+
+[dataset.fields]
+function="function"
+label="label"
+vuln_label_value=1
+cve="cve"
+cwe="cwe"
+project="project"
+
+[dataset.analysis.quiality_metrics]
+completeness=true
+diversity=true
+balance=true
+timespan=true
+uniqueness=true
+cross_contamination=true
+
+[dataset.analysis.structural_metrics]
+loc=true
+tokens=true
+cyclomatic_complexity=true

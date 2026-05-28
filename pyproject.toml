@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vultrition"
+version = "1.0.0"
+description = "A CLI tool for building vulnerability dataset nutrition labels."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+
+authors = [
+  { name = "Torge Hinrichs", email = "torge.hinrichs@tuhh.de" }
+]
+maintainers = [
+  { name = "Torge Hinrichs", email = "torge.hinrichs@tuhh.de" }
+]
+
+dependencies = [
+  "tiktoken",
+  "lizard",
+  "tqdm",
+  "tomli",
+  "pygments",
+  "torch",
+  "transformers",
+  "scikit-learn",
+  "faiss-gpu-cu12",
+  "numpy",
+  "svgwrite",
+]
+
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+keywords = [
+  "vulnerability-datasets",
+  "security",
+  "cli",
+  "nutrition-labels",
+  "dataset-analysis"
+] 
+
+[project.urls]
+Homepage = "https://github.com/gOATiful/vultrition"
+Repository = "https://github.com/gOATiful/vultrition"
+Issues = "https://github.com/gOATiful/vultrition/issues"
+
+[project.scripts]
+vultrition = "vultrition.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vultrition"]

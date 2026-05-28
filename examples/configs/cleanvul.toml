@@ -1,0 +1,31 @@
+[dataset]
+name="CleanVul"
+description = "Toward High-Quality Function-Level Vulnerability Datasets via LLM-Based Noise Reduction"
+version = "Score 4"
+license = "NA"
+languages="cpp"
+has_runable_code_or_test_cases=false
+
+[dataset.files]
+data="datasets/cleanvul/cleanvul.jsonl"
+
+[dataset.fields]
+function="function"
+label="label"
+vuln_label_value=1
+cve="cve"
+cwe="cwe"
+project="project"
+
+[dataset.analysis.quiality_metrics]
+completeness=true
+diversity=true
+balance=true
+timespan=true
+uniqueness=true
+cross_contamination=true
+
+[dataset.analysis.structural_metrics]
+loc=true
+tokens=true
+cyclomatic_complexity=true
