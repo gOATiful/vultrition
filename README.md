@@ -13,7 +13,12 @@ VULTRITION does **not** rank datasets or certify their quality. Instead, it expo
 
 ## Installation
 
-Install from the repository root:
+Install using pip:
+```bash
+pyhon3 -m pip install vultrition
+```
+
+Install from source:
 
 ```bash
 python3 -m pip install -e .
