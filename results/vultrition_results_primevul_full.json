@@ -1,0 +1,185 @@
+{
+  "name": "PrimeVul Full",
+  "version": "v0.1",
+  "description": "PrimeVul is a new dataset for vulnerability detection, aiming to train and evaluate code language models in the realistic vulnerability detection settings.",
+  "license": "MIT",
+  "languages": "cpp",
+  "has_runable_code_or_test_cases": false,
+  "quality_metrics": {
+    "samples": {
+      "train": 175797,
+      "test": 24788,
+      "validation": 23948,
+      "overall": 224533
+    },
+    "completeness": {
+      "train": 0.8927797402686053,
+      "test": 0.8984992738421818,
+      "valid": 0.9164022047770168,
+      "overall": 0.8959306649802034
+    },
+    "diversity": {
+      "unique_cwes": {
+        "train": 122,
+        "test": 71,
+        "validation": 73,
+        "overall": 130
+      },
+      "unique_projects": {
+        "train": 630,
+        "test": 219,
+        "validation": 217,
+        "overall": 751
+      }
+    },
+    "balance": {
+      "train": 0.028443560417702636,
+      "test": 0.0226494492347044,
+      "validation": 0.025390708627702846,
+      "overall": 0.027474614353243734
+    },
+    "timespan": {
+      "train": [
+        "1999",
+        "2022"
+      ],
+      "test": [
+        "2006",
+        "2022"
+      ],
+      "validation": [
+        "2007",
+        "2022"
+      ],
+      "overall": [
+        "1999",
+        "2022"
+      ]
+    },
+    "similarity_top1": {
+      "train": 0.8754399418830872,
+      "test": 0.8434323072433472,
+      "validation": 0.838542103767395,
+      "overall": 0.8802972435951233
+    },
+    "similar_functions_top1": {
+      "train": 30.072754370097325,
+      "test": 18.53316120703566,
+      "validation": 14.489727743444128,
+      "overall": 32.65043445729581
+    },
+    "similarity_top3": {
+      "train": 0.8227774500846863,
+      "test": 0.788590133190155,
+      "validation": 0.7847886085510254,
+      "overall": 0.8282783031463623
+    },
+    "similar_functions_top3": {
+      "train": 8.138932973827767,
+      "test": 3.0458286267548815,
+      "validation": 2.3342241523300484,
+      "overall": 9.978934054237017
+    },
+    "cross_contamination": {
+      "train_test": 0.6351971626281738,
+      "train_valid": 0.6497694551944733,
+      "test_valid": 0.5965284109115601
+    },
+    "cross_contamination_a_b_above_threshold": {
+      "train_test": 0.0009215174320380894,
+      "train_valid": 0.0006314100923223946,
+      "test_valid": 0.000766499919315798
+    },
+    "cross_contamination_b_a_above_threshold": {
+      "train_test": 0.013514603840568016,
+      "train_valid": 0.01858192750960414,
+      "test_valid": 0.000918657090362452
+    }
+  },
+  "structural_metrics": {
+    "loc": {
+      "train": {
+        "min": 1,
+        "max": 3217,
+        "mean": 34.96036357599402,
+        "std": 81.187701633044
+      },
+      "test": {
+        "min": 1,
+        "max": 3217,
+        "mean": 34.96036357599402,
+        "std": 81.187701633044
+      },
+      "validation": {
+        "min": 1,
+        "max": 2447,
+        "mean": 32.31338088690271,
+        "std": 71.75296113621168
+      },
+      "overall": {
+        "min": 1,
+        "max": 23906,
+        "mean": 34.49193762290209,
+        "std": 114.91923280916579
+      }
+    },
+    "tokens": {
+      "train": {
+        "min": 1,
+        "max": 197252,
+        "mean": 371.90742162835545,
+        "std": 1244.8924694210828
+      },
+      "test": {
+        "min": 6,
+        "max": 30354,
+        "mean": 371.1277230918186,
+        "std": 894.8071721031545
+      },
+      "validation": {
+        "min": 4,
+        "max": 23593,
+        "mean": 360.66322866210123,
+        "std": 860.7988030279022
+      },
+      "overall": {
+        "min": 1,
+        "max": 197252,
+        "mean": 370.6220733700614,
+        "std": 1175.0788141127268
+      }
+    },
+    "cyclomatic_complexity": {
+      "train": {
+        "min": 1,
+        "max": 1226,
+        "mean": 6.359204169844902,
+        "std": 14.590680043837413
+      },
+      "test": {
+        "min": 1,
+        "max": 671,
+        "mean": 6.235690235690235,
+        "std": 12.443434344869575
+      },
+      "validation": {
+        "min": 1,
+        "max": 340,
+        "mean": 6.311927467468408,
+        "std": 11.9801804696705
+      },
+      "overall": {
+        "min": 1,
+        "max": 1226,
+        "mean": 6.3408092347020295,
+        "std": 14.115016659111067
+      }
+    },
+    "preprocessor_directives": {
+      "train": 13984,
+      "test": 2413,
+      "validation": 1985,
+      "overall": 18382
+    }
+  }
+}

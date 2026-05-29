@@ -1,0 +1,185 @@
+{
+  "name": "ReposVul",
+  "version": "3dc5504",
+  "description": "A Repository-Level High-Quality Vulnerability Dataset",
+  "license": "",
+  "languages": "cpp",
+  "has_runable_code_or_test_cases": false,
+  "quality_metrics": {
+    "samples": {
+      "train": 185791,
+      "test": 23224,
+      "validation": 23224,
+      "overall": 232239
+    },
+    "completeness": {
+      "train": 1.0,
+      "test": 1.0,
+      "valid": 1.0,
+      "overall": 1.0
+    },
+    "diversity": {
+      "unique_cwes": {
+        "train": 152,
+        "test": 143,
+        "validation": 140,
+        "overall": 152
+      },
+      "unique_projects": {
+        "train": 600,
+        "test": 528,
+        "validation": 529,
+        "overall": 601
+      }
+    },
+    "balance": {
+      "train": 0.030689175020387333,
+      "test": 0.0297064822204487,
+      "validation": 0.03204017242145492,
+      "overall": 0.030725736299241954
+    },
+    "timespan": {
+      "train": [
+        "2006",
+        "2023"
+      ],
+      "test": [
+        "2006",
+        "2023"
+      ],
+      "validation": [
+        "2006",
+        "2023"
+      ],
+      "overall": [
+        "2006",
+        "2023"
+      ]
+    },
+    "similarity_top1": {
+      "train": 0.9297012686729431,
+      "test": 0.7955742478370667,
+      "validation": 0.7973082661628723,
+      "overall": 0.94073885679245
+    },
+    "similar_functions_top1": {
+      "train": 62.522942446081885,
+      "test": 22.59300723389597,
+      "validation": 23.2130554598691,
+      "overall": 66.86473848061695
+    },
+    "similarity_top3": {
+      "train": 0.8855742812156677,
+      "test": 0.7357707023620605,
+      "validation": 0.7365363836288452,
+      "overall": 0.8994079828262329
+    },
+    "similar_functions_top3": {
+      "train": 38.57075961698898,
+      "test": 4.831209094040648,
+      "validation": 4.198243196693076,
+      "overall": 43.45135829899371
+    },
+    "cross_contamination": {
+      "train_test": 0.7809361517429352,
+      "train_valid": 0.7803938090801239,
+      "test_valid": 0.7044351100921631
+    },
+    "cross_contamination_a_b_above_threshold": {
+      "train_test": 0.01486616682185897,
+      "train_valid": 0.013009241567137267,
+      "test_valid": 0.013908026179813985
+    },
+    "cross_contamination_b_a_above_threshold": {
+      "train_test": 0.2827247674819153,
+      "train_valid": 0.27884946606958316,
+      "test_valid": 0.01519979331725801
+    }
+  },
+  "structural_metrics": {
+    "loc": {
+      "train": {
+        "min": 1,
+        "max": 4656,
+        "mean": 29.45884951918912,
+        "std": 67.55583853168763
+      },
+      "test": {
+        "min": 1,
+        "max": 4656,
+        "mean": 29.45884951918912,
+        "std": 67.55583853168763
+      },
+      "validation": {
+        "min": 1,
+        "max": 4424,
+        "mean": 29.58931277876413,
+        "std": 70.62662445221073
+      },
+      "overall": {
+        "min": 1,
+        "max": 6312,
+        "mean": 29.722942635833444,
+        "std": 66.91655884005068
+      }
+    },
+    "tokens": {
+      "train": {
+        "min": 2,
+        "max": 65102,
+        "mean": 324.1960051886259,
+        "std": 830.8061576268524
+      },
+      "test": {
+        "min": 2,
+        "max": 43818,
+        "mean": 320.3998019290389,
+        "std": 817.2630153384266
+      },
+      "validation": {
+        "min": 2,
+        "max": 43626,
+        "mean": 318.6352049603858,
+        "std": 821.5651054572687
+      },
+      "overall": {
+        "min": 2,
+        "max": 65102,
+        "mean": 323.2603008108027,
+        "std": 828.543025299206
+      }
+    },
+    "cyclomatic_complexity": {
+      "train": {
+        "min": 1,
+        "max": 1192,
+        "mean": 5.935308004253977,
+        "std": 11.129374009048979
+      },
+      "test": {
+        "min": 1,
+        "max": 268,
+        "mean": 5.900800149735623,
+        "std": 10.150695750796213
+      },
+      "validation": {
+        "min": 1,
+        "max": 1192,
+        "mean": 5.961222585160989,
+        "std": 13.632666390169563
+      },
+      "overall": {
+        "min": 1,
+        "max": 1192,
+        "mean": 5.9344567275106925,
+        "std": 11.31335255035355
+      }
+    },
+    "preprocessor_directives": {
+      "train": 13650,
+      "test": 1715,
+      "validation": 1663,
+      "overall": 17028
+    }
+  }
+}

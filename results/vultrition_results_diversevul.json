@@ -1,75 +1,75 @@
 {
-  "name": "MegaVul Java",
-  "version": "bde3e7c",
-  "description": "The largest, high-quality, extensible, continuously updated, C/C++/Java function-level vulnerability dataset.",
-  "license": "MIT",
-  "languages": "Java",
+  "name": "DiverseVul",
+  "version": "2023-07-02",
+  "description": "A New Vulnerable Source Code Dataset for Deep Learning Based Vulnerability Detection",
+  "license": "NA",
+  "languages": "cpp",
   "has_runable_code_or_test_cases": false,
   "quality_metrics": {
     "samples": {
       "train": -1,
       "test": -1,
       "validation": -1,
-      "overall": 41949
+      "overall": 330491
     },
     "completeness": {
       "train": null,
       "test": null,
       "valid": null,
-      "overall": 1.0
+      "overall": 0.0
     },
     "diversity": {
       "unique_cwes": {
         "train": null,
         "test": null,
         "validation": null,
-        "overall": 115
+        "overall": 150
       },
       "unique_projects": {
         "train": null,
         "test": null,
         "validation": null,
-        "overall": 362
+        "overall": 800
       }
     },
     "balance": {
       "train": null,
       "test": null,
       "validation": null,
-      "overall": 0.06156999696325539
+      "overall": 0.06080963966797841
     },
     "timespan": {
       "train": null,
       "test": null,
       "validation": null,
       "overall": [
-        "2010",
-        "2024"
+        "-",
+        "-"
       ]
     },
     "similarity_top1": {
       "train": -1,
       "test": -1,
       "validation": -1,
-      "overall": 0.8233751654624939
+      "overall": 0.8995131254196167
     },
     "similar_functions_top1": {
       "train": -1,
       "test": -1,
       "validation": -1,
-      "overall": 17.88123673985077
+      "overall": 42.99421164267711
     },
     "similarity_top3": {
       "train": -1,
       "test": -1,
       "validation": -1,
-      "overall": 0.7645594477653503
+      "overall": 0.8480916619300842
     },
     "similar_functions_top3": {
       "train": -1,
       "test": -1,
       "validation": -1,
-      "overall": 5.389878185415624
+      "overall": 16.364742156367345
     },
     "cross_contamination": {
       "train_test": -1,
@@ -94,9 +94,9 @@
       "validation": null,
       "overall": {
         "min": 1,
-        "max": 678,
-        "mean": 12.499778793688247,
-        "std": 15.93868170359261
+        "max": 23906,
+        "mean": 34.906961471784676,
+        "std": 108.92629705685992
       }
     },
     "tokens": {
@@ -104,10 +104,10 @@
       "test": null,
       "validation": null,
       "overall": {
-        "min": 3,
-        "max": 8117,
-        "mean": 122.57639037879329,
-        "std": 178.10872743484006
+        "min": 1,
+        "max": 197252,
+        "mean": 379.0199460802261,
+        "std": 1136.4300998926844
       }
     },
     "cyclomatic_complexity": {
@@ -116,16 +116,16 @@
       "validation": null,
       "overall": {
         "min": 1,
-        "max": 156,
-        "mean": 3.1416457749594455,
-        "std": 4.144215763367287
+        "max": 1226,
+        "mean": 6.322694805083789,
+        "std": 12.53651601861497
       }
     },
     "preprocessor_directives": {
       "train": -1,
       "test": -1,
       "validation": -1,
-      "overall": 0
+      "overall": 28838
     }
   }
 }
