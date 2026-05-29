@@ -173,27 +173,14 @@ The JSON file can be rendered as an SVG label:
 vultrition --create_vultrition_label results.json --svg_output vultrition_label.svg
 ```
 
-## Paper and demo
+## Video Demo
 
-VULTRITION is described in the paper **“VULTRITION: Nutrition Label Generation for Function Vulnerability Datasets.”** The paper demonstrates the tool by generating nutrition labels for popular function-level vulnerability datasets across C, C++, Java, and Python. (Link avaiable if paper gets accepted)
-
-Video demo: https://youtu.be/wEaGWKP5Szo
+Video demo is available on [YouTube](https://youtu.be/wEaGWKP5Szo)
 
 ## Notes
 
-- VULTRITION is intended to support dataset selection, documentation, and benchmark interpretation, not to produce a single quality score.
-- The config key is currently spelled `has_runable_code_or_test_cases` to match the implementation.
-- The loader accepts both `[dataset.analysis.quality_metrics]` and the legacy misspelled `[dataset.analysis.quiality_metrics]`, but new configs should use `quality_metrics`.
-- The first analysis run may download the code-embedding model used for similarity analysis.
-- Existing config files are not overwritten by the template command.
-
-## Project
-
-- Package name: `vultrition`
-- CLI entry point: `vultrition.cli:main`
-- Internal parser program name: `vds-nutrition-labels`
-- Version: `0.1.0`
-- License: MIT
+- The generated nutrional labels for all 15 datasets can be found in [`examples/labels/`](examples/labels/). 
+- The raw results can be found in [`results/`](results/).
 
 ## Contributing
 
