@@ -13,10 +13,10 @@
       "overall": 9408
     },
     "completeness": {
-      "train": 1.0,
-      "test": 1.0,
-      "valid": 1.0,
-      "overall": 1.0
+      "train": 100.0,
+      "test": 100.0,
+      "valid": 100.0,
+      "overall": 100.0
     },
     "diversity": {
       "unique_cwes": {

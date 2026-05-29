@@ -16,7 +16,7 @@
       "train": null,
       "test": null,
       "valid": null,
-      "overall": 0.41031960153574765
+      "overall": 41.031960153574765
     },
     "diversity": {
       "unique_cwes": {

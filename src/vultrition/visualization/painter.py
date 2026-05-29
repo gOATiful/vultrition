@@ -286,14 +286,16 @@ def draw_label(label: AnalysisResults):
     separator(dwg, MARGIN, y, W-(2*MARGIN),
               stroke_width=4, stroke_color=BLACK)
     y += QUALITY_METRICS_PADDING + 4
+    
     splitnumerical_row(
-        "Vulnerability Ratio:", "Ratio between vuln and non-vuln entries", label.quality_metrics.balance, dwg, MARGIN, y)
+        "Class Imbalance Ratio:", "Ratio between vuln and non-vuln entries", label.quality_metrics.balance, dwg, MARGIN, y)
     y += 42
     separator(dwg, MARGIN, y, W-(2*MARGIN),
               stroke_width=4, stroke_color=BLACK)
     y += QUALITY_METRICS_PADDING + 4
+       
     splitnumerical_row(
-        "Completeness:", "Percentage of entries with complete meta data", label.quality_metrics.completeness, dwg, MARGIN, y)
+        "Completeness:", "Percentage of entries with all metadata", label.quality_metrics.completeness, dwg, MARGIN, y, percent=True)
     y += 42
     separator(dwg, MARGIN, y, W-(2*MARGIN),
               stroke_width=4, stroke_color=BLACK)
